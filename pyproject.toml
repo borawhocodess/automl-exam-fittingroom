@@ -1,0 +1,22 @@
+[project]
+name = "automl"
+license = { file = "LICENSE" }
+# Feel free to change from here
+version = "0.1.0"
+dependencies = ["scikit-learn", "openml", "pandas", "numpy<2.0", "IPython"]
+requires-python = ">=3.10"
+authors = [{ name = "user", email = "user@user.com" }]
+readme = "README.md"
+description = "AutoML SS25 Exam - Tabular"
+classifiers = [
+  'Intended Audience :: Science/Research',
+  'Intended Audience :: Developers',
+  'License :: OSI Approved :: BSD License',
+  'Programming Language :: Python',
+  'Topic :: Software Development',
+  'Topic :: Scientific/Engineering',
+  'Operating System :: POSIX',
+  'Operating System :: Unix',
+  'Operating System :: MacOS',
+  'Programming Language :: Python :: 3',
+]
