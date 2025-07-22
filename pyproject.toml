@@ -1,13 +1,25 @@
 [project]
-name = "automl"
-license = { file = "LICENSE" }
-# Feel free to change from here
+name = "fittingroom"
 version = "0.1.0"
-dependencies = ["scikit-learn", "openml", "pandas", "numpy<2.0", "IPython"]
-requires-python = ">=3.10"
-authors = [{ name = "user", email = "user@user.com" }]
-readme = "README.md"
 description = "AutoML SS25 Exam - Tabular"
+readme = "README.md"
+authors = [
+  { name = "Kürşat Kaya" },
+  { name = "Salih Bora Öztürk", email = "borawhocodess@gmail.com" },
+  { name = "Zeynep Türkmen" }
+]
+license = { file = "LICENSE" }
+
+requires-python = ">=3.10"
+
+dependencies = [
+  "scikit-learn",
+  "openml",
+  "pandas",
+  "numpy<2.0",
+  "IPython"
+]
+
 classifiers = [
   'Intended Audience :: Science/Research',
   'Intended Audience :: Developers',
@@ -20,3 +32,6 @@ classifiers = [
   'Operating System :: MacOS',
   'Programming Language :: Python :: 3',
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
