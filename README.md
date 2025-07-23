@@ -19,7 +19,13 @@ pip install -e .
 This will train our AutoML system and generate predictions for `X_test`:
 
 ```
-python fittingroom.py -dataset ........... -save_dir ...........
+python oneclick.py \
+  --task bike_sharing_demand \
+  --seed 42 \
+  --fold 0 \
+  --datadir data \
+  --output-path preds/bike_sharing_demand/output.npy \
+  --log-level info
 ```
 
 
@@ -48,21 +54,22 @@ python fittingroom.py -dataset ........... -save_dir ...........
 
 We provide the following:
 
-- [`run.py`](./run.py): ...........
-- [`fittingroom.py`](./fittingroom.py): ...........
-- [`src/automl/automl.py`](./src/automl/automl.py): ...........
+- [`oneclick.py`](./oneclick.py): ...........
+- [`src/fittingroom/automl.py`](./src/fittingroom/automl.py): ...........
+- [`src/fittingroom/data.py`](./src/fittingroom/data.py): ...........
+- [`src/fittingroom/pipeline.py`](./src/fittingroom/pipeline.py): ...........
 - ...........
 
 
 ## Reference performance
 
-| Dataset | Test performance |
-| -- | -- |
-| bike_sharing_demand | 0.9457 |
-| brazilian_houses | 0.9896 |
-| superconductivity | 0.9311 |
-| wine_quality | 0.4410 |
-| yprop_4_1 | 0.0778 |
+| Dataset | Baseline | Ours |
+| -- | -- | -- |
+| bike_sharing_demand | 0.9457 | - |
+| brazilian_houses | 0.9896 | - |
+| superconductivity | 0.9311 | - |
+| wine_quality | 0.4410 | - |
+| yprop_4_1 | 0.0778 | - |
 
 The scores listed are the R² values calculated using scikit-learn's `metrics.r2_score`.
 
