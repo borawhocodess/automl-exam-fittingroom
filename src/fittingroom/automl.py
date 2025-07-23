@@ -1,57 +1,67 @@
-"""AutoML class for regression tasks.
-
-This module contains an example AutoML class that simply returns dummy predictions.
-You do not need to use this setup or sklearn and you can modify this however you like.
-"""
 from __future__ import annotations
 
-from sklearn.dummy import DummyRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score
-import pandas as pd
-import numpy as np
 import logging
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
+
+from fittingroom.pipeline import (
+    extract_meta_features,
+    select_portfolio,
+    fit_model,
+    aggregate_predictions,
+)
+from fittingroom.utils import get_default_constant
 
 logger = logging.getLogger(__name__)
 
-METRICS = {"r2": r2_score}
 
 class AutoML:
 
     def __init__(
         self,
         seed: int,
-        metric: str = "r2",
     ) -> None:
-        self.seed = seed
-        self.metric = METRICS[metric]
-        self._model: DummyRegressor | None = None
+        self.seed = seed if seed is not None else get_default_constant("SEED")
+        self._test_size = get_default_constant("TEST_SIZE")
+        self._precision = get_default_constant("PRECISION")
+        self._models: list = []
+
 
     def fit(
-        self,
-        X: pd.DataFrame,
-        y: pd.Series,
-    ) -> AutoML:
+            self,
+            X,
+            y,
+        ):
         X_train, X_val, y_train, y_val = train_test_split(
             X,
             y,
-            random_state=self.seed,
-            test_size=0.2,
+            test_size=self._test_size,
+            random_state=self.seed
         )
 
-        model = DummyRegressor()
-        model.fit(X_train, y_train)
-        self._model = model
+        meta_features = extract_meta_features(X_train)
 
-        val_preds = model.predict(X_val)
-        val_score = self.metric(y_val, val_preds)
-        logger.info(f"Validation score: {val_score:.4f}")
+        portfolio = select_portfolio(meta_features)
+
+        self._models = [
+            fit_model(name, X_train, y_train) for name in portfolio
+        ]
+
+        val_preds_list = [m.predict(X_val) for m in self._models]
+        val_preds = aggregate_predictions(val_preds_list)
+        val_r2 = r2_score(y_val, val_preds)
+        logging.getLogger(__name__).info(f"validation r2: {val_r2:.{self._precision}f}")
 
         return self
 
-
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        if self._model is None:
-            raise ValueError("Model not fitted")
+        if not self._models:
+            raise ValueError(".fit must be called before predict")
 
-        return self._model.predict(X)  # type: ignore
+        preds = [m.predict(X) for m in self._models]
+        aggregated_preds = aggregate_predictions(preds)
+        return aggregated_preds
+
