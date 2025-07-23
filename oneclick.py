@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.metrics import r2_score
 
-from fittingroom.automl import AutoML
+from fittingroom.automl import FittingRoom
 from fittingroom.data import Dataset
 from fittingroom.utils import get_default_constant, run_and_time
 
@@ -52,10 +52,10 @@ def main(
 
     logger.info("dataset is going into the fittingroom")
 
-    automl = AutoML(seed=seed)
+    fittingroom = FittingRoom(seed=seed)
 
-    (fitted_automl, fit_duration, _) = run_and_time(automl.fit, dataset.X_train, dataset.y_train)
-    (test_preds, pred_duration, timestamp) = run_and_time(fitted_automl.predict, dataset.X_test)
+    (fittingroom, fit_duration, _) = run_and_time(fittingroom.fit, dataset.X_train, dataset.y_train)
+    (test_preds, pred_duration, timestamp) = run_and_time(fittingroom.predict, dataset.X_test)
 
     precision = get_default_constant("PRECISION")
 

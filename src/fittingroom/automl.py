@@ -18,7 +18,7 @@ from fittingroom.utils import get_default_constant
 logger = logging.getLogger(__name__)
 
 
-class AutoML:
+class FittingRoom:
 
     def __init__(
         self,
