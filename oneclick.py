@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.metrics import r2_score
 
-from fittingroom.automl import FittingRoom
+from fittingroom import FittingRoom
 from fittingroom.data import Dataset
 from fittingroom.utils import get_default_constant, run_and_time
 
