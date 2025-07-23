@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 from pathlib import Path
 
@@ -9,6 +10,30 @@ from sklearn.metrics import r2_score
 
 from fittingroom.automl import AutoML
 from fittingroom.data import Dataset
+from fittingroom.utils import get_default_constant, run_and_time
+
+
+class ColorFormatter(logging.Formatter):
+    RESET = "\033[0m"
+    COLORS = {
+        logging.DEBUG: "\033[36m",     # Cyan
+        logging.INFO: "\033[32m",      # Green
+        logging.WARNING: "\033[33m",   # Yellow
+        logging.ERROR: "\033[31m",     # Red
+        logging.CRITICAL: "\033[41m",  # Red background
+    }
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, self.RESET)
+        formatted = super().format(record)
+        prefix, _, message = formatted.partition(": ")
+        return f"{color}{prefix}:{self.RESET} {message}{self.RESET}"
+
+handler = logging.StreamHandler()
+formatter = ColorFormatter('%(levelname)s:%(name)s: %(message)s')
+handler.setFormatter(formatter)
+logging.getLogger().handlers = [handler]
+logging.getLogger().setLevel(logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -25,25 +50,63 @@ def main(
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
-    logger.info("Fitting AutoML")
+    logger.info("dataset is going into the fittingroom")
 
     automl = AutoML(seed=seed)
 
-    automl.fit(dataset.X_train, dataset.y_train)
+    (fitted_automl, fit_duration, _) = run_and_time(automl.fit, dataset.X_train, dataset.y_train)
+    (test_preds, pred_duration, timestamp) = run_and_time(fitted_automl.predict, dataset.X_test)
 
-    test_preds: np.ndarray = automl.predict(dataset.X_test)
+    precision = get_default_constant("PRECISION")
 
-    logger.info("Writing predictions to disk")
+    logger.info(f"total time spent in fitting room: {fit_duration+pred_duration:.{precision}f} s")
+
+    if output_path is None:
+        predictions_dir = get_default_constant("PREDICTIONS_DIR")
+        predictions_dir_path = Path(predictions_dir)
+        predictions_filename = f"{task}_{timestamp}_fold_{fold}.npy"
+        output_path = predictions_dir_path / task / predictions_filename
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with output_path.open("wb") as f:
         np.save(f, test_preds)
+        logger.info(f"predictions saved to: {output_path}")
 
     if dataset.y_test is not None:
         r2_test = r2_score(dataset.y_test, test_preds)
-        logger.info(f"R^2 on test set: {r2_test}")
+        logger.info(f"r2 on test set: {r2_test:.{precision}f}")
     else:
         # setting for the exam dataset
-        logger.info(f"No test set for task '{task}'")
+        logger.info(f"no test set for task {task}")
+
+    metadata_filename = get_default_constant("METADATA_FILENAME")
+    metadata_dir = get_default_constant("METADATA_DIR")
+    metadata_dir_path = Path(metadata_dir)
+    metadata_dir_path.mkdir(parents=True, exist_ok=True)
+    metadata_file_path = metadata_dir_path / metadata_filename
+
+    metadata_entry = {
+        "timestamp": timestamp,
+        "seed": seed,
+        "task": task,
+        "fold": fold,
+        "r2_test": r2_test if dataset.y_test is not None else None,
+        "output_path": str(output_path),
+        "fit_duration": fit_duration,
+        "predict_duration": pred_duration,
+    }
+
+    if metadata_file_path.exists():
+        with metadata_file_path.open("r") as f:
+            metadata = json.load(f)
+    else:
+        metadata = {}
+
+    metadata[timestamp] = metadata_entry
+
+    with metadata_file_path.open("w") as f:
+        json.dump(metadata, f, indent=get_default_constant("INDENT"))
 
 
 if __name__ == "__main__":
@@ -53,7 +116,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=get_default_constant("SEED"),
         help=(
             "Random seed for reproducibility"
         ),
@@ -61,7 +124,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output-path",
         type=Path,
-        default=Path("data/bike_sharing_demand/1/predictions.npy"),
+        default=None,
         help=(
             "The path to save the predictions to."
         ),
@@ -90,28 +153,26 @@ if __name__ == "__main__":
     parser.add_argument(
         "--fold",
         type=int,
-        default=1,
+        default=get_default_constant("FOLD"),
         help=(
             "The fold to run on."
         ),
     )
     parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help=(
-            "Whether to log only warnings and errors."
-        ),
+        "--log-level",
+        type=str,
+        choices=["debug", "info", "warning", "error", "critical"],
+        default="info",
+        help="Set the logging level."
     )
 
     args = parser.parse_args()
 
-    if not args.quiet:
-        logging.basicConfig(level=logging.INFO)
-    else:
-        logging.basicConfig(level=logging.WARNING)
+    level = getattr(logging, args.log_level.upper())
+    logging.getLogger().setLevel(level)
 
     logger.info(
-        f"Running task {args.task}"
+        f"running task {args.task}"
         f"\n{args}"
     )
 
