@@ -14,12 +14,12 @@ Clone the repository, afterwards install dependencies via:
 pip install -e .
 ```
 
-## One-click command
+## One-click run command
 
 This will train our AutoML system and generate predictions for `X_test`:
 
 ```
-python oneclick.py \
+python run.py \
   --task bike_sharing_demand \
   --seed 42 \
   --fold 0 \
@@ -54,7 +54,7 @@ python oneclick.py \
 
 We provide the following:
 
-- [`oneclick.py`](./oneclick.py): ...........
+- [`run.py`](./run.py): ...........
 - [`src/fittingroom/automl.py`](./src/fittingroom/automl.py): ...........
 - [`src/fittingroom/data.py`](./src/fittingroom/data.py): ...........
 - [`src/fittingroom/pipeline.py`](./src/fittingroom/pipeline.py): ...........
