@@ -47,12 +47,13 @@ def main(
     datadir: Path,
     task: str,
     fold: int,
+    ask_expert_opinion: bool,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
     logger.info("dataset is going into the fittingroom")
 
-    fittingroom = FittingRoom(seed=seed)
+    fittingroom = FittingRoom(seed=seed, ask_expert_opinion=ask_expert_opinion)
 
     (fittingroom, fit_duration, _) = run_and_time(fittingroom.fit, dataset.X_train, dataset.y_train)
     (test_preds, pred_duration, timestamp) = run_and_time(fittingroom.predict, dataset.X_test)
@@ -165,9 +166,13 @@ if __name__ == "__main__":
         default="info",
         help="Set the logging level."
     )
+    parser.add_argument(
+        "--ask-expert-opinion",
+        action="store_true",
+        help="Whether to ask for expert opinion before making choices.",
+    )
 
     args = parser.parse_args()
-
     level = getattr(logging, args.log_level.upper())
     logging.getLogger().setLevel(level)
 
@@ -182,4 +187,5 @@ if __name__ == "__main__":
         task=args.task,
         datadir=args.datadir,
         fold=args.fold,
+        ask_expert_opinion=args.ask_expert_opinion,
     )
