@@ -15,18 +15,14 @@ logger = logging.getLogger(__name__)
 
 MODEL_PORTFOLIO = {
     "linear": LinearRegression,
-
     "knn": None,
-
     "rf": RandomForestRegressor,
     "xgboost": None,
     "lightgbm": None,
     "catboost": None,
-
     "tabpfn": TabPFNRegressor,
     "nanotabpfn": None,
     "tabdpt": None,
-
     "realmlp": None,
     "modern_nca": None,
     "tabm": None,
@@ -34,18 +30,14 @@ MODEL_PORTFOLIO = {
 
 SEARCH_SPACES = {
     "linear": {},
-
     "knn": {},
-
     "rf": {},
     "xgboost": {},
     "lightgbm": {},
     "catboost": {},
-
     "tabpfn": {},
     "nanotabpfn": {},
     "tabdpt": {},
-
     "realmlp": {},
     "modern_nca": {},
     "tabm": {},
@@ -82,7 +74,7 @@ def select_portfolio(
         if not ask_expert_opinion:
             return True
         ans = input(f"{action_desc} Proceed? (y/n): ").strip().lower()
-        return ans.startswith("y") # TODO: is everything else no?
+        return ans.startswith("y")  # TODO: is everything else no?
 
     # Rule 1: Drop tabpfn on large datasets
     if n > 10_000 and "tabpfn" in chosen:
@@ -130,7 +122,7 @@ def select_portfolio(
     # Ensure at least one per family remains TODO: WHY?
     families = {
         "tree": {"lightgbm", "catboost", "xgboost", "randomforest"},
-        "mlp": {"realmlp", "modern_nca", "knn"}, # TODO: is knn mlp?
+        "mlp": {"realmlp", "modern_nca", "knn"},  # TODO: is knn mlp?
         "linear": {"linear"},
         # TODO: why tabular models are not in families?
     }
@@ -152,8 +144,12 @@ def select_portfolio(
 
 
 def build_pipeline(model_name: str, X: pd.DataFrame) -> Pipeline:
-    numeric_cols = [c for c in X.columns if X[c].dtype.name not in ("object", "category", "bool")]
-    categorical_cols = [c for c in X.columns if X[c].dtype.name in ("object", "category", "bool")]
+    numeric_cols = [
+        c for c in X.columns if X[c].dtype.name not in ("object", "category", "bool")
+    ]
+    categorical_cols = [
+        c for c in X.columns if X[c].dtype.name in ("object", "category", "bool")
+    ]
 
     numeric_pipe = Pipeline(
         steps=[
@@ -203,4 +199,3 @@ def aggregate_predictions(preds_list):
     logger.debug(f"aggregated predictions: {aggregated_predictions.shape}")
 
     return aggregated_predictions
-

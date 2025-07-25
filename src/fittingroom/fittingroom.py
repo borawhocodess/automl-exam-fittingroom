@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class FittingRoom:
-
     def __init__(
         self,
         seed: int,

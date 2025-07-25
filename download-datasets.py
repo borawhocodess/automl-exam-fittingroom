@@ -22,16 +22,18 @@ def download_and_unzip(url, extract_to):
 
     os.makedirs(extract_to, exist_ok=True)
 
-    with zipfile.ZipFile(zip_bytes, 'r') as zip_ref:
+    with zipfile.ZipFile(zip_bytes, "r") as zip_ref:
         zip_ref.extractall(extract_to)
 
     print(f"Downloaded and extracted zip file to: {extract_to}")
+
 
 def main():
     url = "https://ml.informatik.uni-freiburg.de/research-artifacts/automl-exam-25-tabular/tabular-phase1.zip"
     extract_folder = "data"
 
     download_and_unzip(url, extract_folder)
+
 
 if __name__ == "__main__":
     main()
