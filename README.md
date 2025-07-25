@@ -1,31 +1,36 @@
 # fittingroom AutoML Exam - SS25 (Tabular Data)
 
-the purpose of this repository is to house our AutoML system as the fittingroom team for the AutoML exam in SS25.
+The purpose of this repository is to house our AutoML system as the fittingroom team for the AutoML exam in SS25.
 
-what we did:
+What we did:
 - ...........
 - ...........
 
 
-## Installation
+## Setup
 
-Clone the repository, afterwards install dependencies via:
+Clone the repository, afterwards using [`uv`](https://github.com/astral-sh/uv):
+
+```bash
+uv run python download-datasets.py
 ```
-pip install -e .
+
+```bash
+uv pip install -e .
 ```
 
 ## One-click run command
 
 This will train our AutoML system and generate predictions for `X_test`:
 
-```
-python run.py \
+```bash
+uv run python run.py \
   --task bike_sharing_demand \
   --seed 42 \
-  --fold 0 \
+  --fold 1 \
   --datadir data \
   --output-path preds/bike_sharing_demand/output.npy \
-  --log-level info
+  --log-level debug
 ```
 
 
@@ -55,31 +60,32 @@ python run.py \
 We provide the following:
 
 - [`run.py`](./run.py): ...........
-- [`src/fittingroom/automl.py`](./src/fittingroom/automl.py): ...........
-- [`src/fittingroom/data.py`](./src/fittingroom/data.py): ...........
+- [`download-datasets.py`](./download-datasets.py): ...........
 - [`src/fittingroom/pipeline.py`](./src/fittingroom/pipeline.py): ...........
 - ...........
 
 
-## Reference performance
+## Performance table
 
-| Dataset | Baseline | Ours |
-| -- | -- | -- |
-| bike_sharing_demand | 0.9457 | - |
-| brazilian_houses | 0.9896 | - |
-| superconductivity | 0.9311 | - |
-| wine_quality | 0.4410 | - |
-| yprop_4_1 | 0.0778 | - |
+TODO: eval 5 repetitions, different seeds, different folds, average, fill
+
+| Dataset             | Baseline | Ours |
+| ------------------- | -------- | ---- |
+| bike_sharing_demand | 0.9457   | - |
+| brazilian_houses    | 0.9896   | - |
+| superconductivity   | 0.9311   | - |
+| wine_quality        | 0.4410   | - |
+| yprop_4_1           | 0.0778   | - |
+| **exam dataset**    | -        | **-** |
 
 The scores listed are the R² values calculated using scikit-learn's `metrics.r2_score`.
 
 ## Thanks
 
-a big thank you goes out to
+A big thank you goes out to
 - the team
 - our families
 - our friends
 - dear AutoML SS25 orga team
 - university of freiburg
 - sklearn developers
-

@@ -5,7 +5,7 @@ description = "AutoML SS25 Exam - Tabular"
 readme = "README.md"
 authors = [
   { name = "Kürşat Kaya" },
-  { name = "Salih Bora Öztürk", email = "borawhocodess@gmail.com" },
+  { name = "Salih Bora Öztürk", email = "boraozturksalih@gmail.com" },
   { name = "Zeynep Türkmen" }
 ]
 license = { file = "LICENSE" }
@@ -17,7 +17,10 @@ dependencies = [
   "openml",
   "pandas",
   "numpy<2.0",
-  "IPython"
+  "IPython",
+  "torch>=2.7.1",
+  "tabpfn>=2.1.0",
+  "matplotlib>=3.10.3",
 ]
 
 classifiers = [
