@@ -44,13 +44,28 @@ def set_randomness_seed(seed=get_default_constant("SEED")):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+def pxp(x):
+    """
+    print sandwich
+    """
+    print()
+    print(x)
+    print()
+
+
+def get_timestamp():
+    """
+    returns the current timestamp in the format YYYMMDD_HHMMSS
+    """
+    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
 
 def run_and_time(func, *args, **kwargs):
     start = time.time()
     result = func(*args, **kwargs)
     end = time.time()
     duration = end - start
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = get_timestamp()
     return result, duration, timestamp
 
 
@@ -100,7 +115,13 @@ def apply_style_to_figure(fig, X, y, **kwargs):
 
 def print_datasets_overview(
         datadir = get_default_constant("DATA_DIR"),
-        tasks = ["bike_sharing_demand", "brazilian_houses", "superconductivity", "wine_quality", "yprop_4_1"],
+        tasks = [
+            "bike_sharing_demand",
+            "brazilian_houses",
+            "superconductivity",
+            "wine_quality",
+            "yprop_4_1",
+        ],
         fold = get_default_constant("FOLD"),
         table_cell_width = get_default_constant("DEFAULT_TABLE_CELL_WIDTH"),
     ):
@@ -110,10 +131,18 @@ def print_datasets_overview(
         "brazilian_houses": "bh",
         "superconductivity": "sc",
         "wine_quality": "wq",
-        "yprop_4_1": "y41"
+        "yprop_4_1": "y41",
     }
 
-    rows = ["X_train", "X_test", "y_train", "y_test", "has_nan", "has_cat", "has_bool"]
+    rows = [
+        "X_train",
+        "X_test",
+        "y_train",
+        "y_test",
+        "has_nan",
+        "has_cat",
+        "has_bool",
+    ]
 
     width = table_cell_width
 
