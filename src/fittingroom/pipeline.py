@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
@@ -13,39 +14,59 @@ from tabpfn import TabPFNRegressor
 logger = logging.getLogger(__name__)
 
 MODEL_PORTFOLIO = {
-    "realmlp": None,
-    "tabm": None,
+    "linear": LinearRegression,
+
+    "knn": None,
+
+    "rf": RandomForestRegressor,
+    "xgboost": None,
     "lightgbm": None,
     "catboost": None,
-    "xgboost": None,
-    "modern_nca": None,
-    "linear": LinearRegression,
-    "knn": None,
-    "rf": RandomForestRegressor,
+
     "tabpfn": TabPFNRegressor,
-    # … etc.
+    "nanotabpfn": None,
+    "tabdpt": None,
+
+    "realmlp": None,
+    "modern_nca": None,
+    "tabm": None,
 }
 
 SEARCH_SPACES = {
-    "lr": {},
-    "rf": {
-        "n_estimators": [50, 100, 200],
-        "max_depth":   [None, 5, 10],
-    },
+    "linear": {},
+
+    "knn": {},
+
+    "rf": {},
+    "xgboost": {},
+    "lightgbm": {},
+    "catboost": {},
+
     "tabpfn": {},
+    "nanotabpfn": {},
+    "tabdpt": {},
+
+    "realmlp": {},
+    "modern_nca": {},
+    "tabm": {},
 }
 
 
 def select_portfolio(
-    meta_features, portfolio=MODEL_PORTFOLIO, ask_expert_opinion: bool = False
-) -> list:
+    meta_features,
+    portfolio=MODEL_PORTFOLIO,
+    ask_expert_opinion: bool = False,
+):
     """
     Select a subset of models based on meta-features.
     If ask_expert_opinion is True, prompt before each modification.
     """
     portfolio_to_choose = {k: v for k, v in portfolio.items() if v is not None}
-    print(f"Available models: {list(portfolio_to_choose.keys())}")
+
+    logger.debug(f"available portfolio: {list(portfolio_to_choose.keys())}")
+
     chosen = set(portfolio_to_choose)
+
     n = meta_features.get("n_instances", 0)
     pct_m = meta_features.get("pct_missing", 0.0)
     num = meta_features.get("n_numeric", 0)
@@ -53,55 +74,65 @@ def select_portfolio(
     ratio = num / cat if cat else np.inf
     skew = abs(meta_features.get("target_skew", 0.0))
 
+    # TODO: remove later, for pipeline to work on CPU for now
+    if not torch.cuda.is_available() and n > 999:
+        chosen.remove("tabpfn")
+
     def confirm(action_desc: str) -> bool:
         if not ask_expert_opinion:
             return True
         ans = input(f"{action_desc} Proceed? (y/n): ").strip().lower()
-        return ans.startswith("y")
+        return ans.startswith("y") # TODO: is everything else no?
 
     # Rule 1: Drop tabpfn on large datasets
     if n > 10_000 and "tabpfn" in chosen:
         if confirm(f"Dataset has {n} instances, >10k — remove 'tabpfn'?"):
             chosen.remove("tabpfn")
+
             logger.debug("Removed tabpfn due to large n_instances")
 
-    # Rule 2: Very high-dimensional -> drop MLPs/KNN
+    # Rule 2: Very high-dimensional -> drop MLPs/KNN TODO: WHY?
     if meta_features.get("n_features", 0) > 1000:
         for m in ["realmlp", "modern_nca", "knn"]:
             if m in chosen and confirm(f"Too many features — remove '{m}'?"):
                 chosen.remove(m)
+
                 logger.debug(f"Removed {m} due to high n_features")
 
-    # Rule 3: High missingness -> keep only tree-based
+    # Rule 3: High missingness -> keep only tree-based TODO: WHY?
     if pct_m > 0.2:
-        keep = {"catboost", "lightgbm", "xgboost", "randomforest", "extratrees"}
+        keep = {"catboost", "lightgbm", "xgboost", "randomforest"}
         to_drop = chosen - keep
         for m in list(to_drop):
             if confirm(f"Missingness {pct_m:.2%} >20% — drop '{m}'?"):
                 chosen.discard(m)
+
                 logger.debug(f"Removed {m} due to high missingness")
 
-    # Rule 4: Mostly categorical -> drop pure numeric learners
+    # Rule 4: Mostly categorical -> drop pure numeric learners TODO: WHY?
     if ratio < 0.5:
         for m in ["realmlp", "modern_nca", "linear", "knn"]:
             if m in chosen and confirm(
                 f"Categorical ratio high (num/cat={ratio:.2f}) — drop '{m}'?"
             ):
                 chosen.remove(m)
+
                 logger.debug(f"Removed {m} due to high categorical proportion")
 
-    # Rule 5: Highly skewed target -> drop linear/MLP
+    # Rule 5: Highly skewed target -> drop linear/MLP TODO: WHY?
     if skew > 1.0:
         for m in ["linear", "realmlp", "modern_nca"]:
             if m in chosen and confirm(f"Target skew {skew:.2f} >1.0 — drop '{m}'?"):
                 chosen.remove(m)
+
                 logger.debug(f"Removed {m} due to high target skew")
 
-    # Ensure at least one per family remains
+    # Ensure at least one per family remains TODO: WHY?
     families = {
         "tree": {"lightgbm", "catboost", "xgboost", "randomforest"},
-        "mlp": {"realmlp", "modern_nca", "knn"},
+        "mlp": {"realmlp", "modern_nca", "knn"}, # TODO: is knn mlp?
         "linear": {"linear"},
+        # TODO: why tabular models are not in families?
     }
     for fam, models in families.items():
         if not (chosen & models):
@@ -110,9 +141,11 @@ def select_portfolio(
                 # control if it id not none in portfolio
                 if fallback in portfolio_to_choose:
                     chosen.add(fallback)
+
                     logger.debug(f"Added fallback {fallback} for family {fam}")
 
     chosen_portfolio = list(chosen)
+
     logger.debug(f"chosen portfolio: {chosen_portfolio}")
 
     return chosen_portfolio

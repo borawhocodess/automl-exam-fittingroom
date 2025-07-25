@@ -10,7 +10,7 @@ from sklearn.metrics import r2_score
 
 from fittingroom import FittingRoom
 from fittingroom.data import Dataset
-from fittingroom.utils import get_default_constant, run_and_time
+from fittingroom.utils import get_default_constant, pxp, run_and_time
 
 
 class ColorFormatter(logging.Formatter):
@@ -164,17 +164,23 @@ if __name__ == "__main__":
         type=str,
         choices=["debug", "info", "warning", "error", "critical"],
         default="info",
-        help="Set the logging level."
+        help=(
+            "Set the logging level."
+        ),
     )
     parser.add_argument(
         "--ask-expert-opinion",
         action="store_true",
-        help="Whether to ask for expert opinion before making choices.",
+        help=(
+            "Whether to ask for expert opinion before making choices."
+        ),
     )
 
     args = parser.parse_args()
     level = getattr(logging, args.log_level.upper())
     logging.getLogger().setLevel(level)
+
+    pxp("entering the fittingroom")
 
     logger.info(
         f"running task {args.task}"
@@ -189,3 +195,5 @@ if __name__ == "__main__":
         fold=args.fold,
         ask_expert_opinion=args.ask_expert_opinion,
     )
+
+    pxp("left the fittingroom")
