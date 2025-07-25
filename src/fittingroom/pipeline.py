@@ -13,13 +13,13 @@ from tabpfn import TabPFNRegressor
 logger = logging.getLogger(__name__)
 
 MODEL_PORTFOLIO = {
-    "realmlp": LinearRegression,
+    "realmlp": None,
     "tabm": None,
     "lightgbm": None,
     "catboost": None,
     "xgboost": None,
     "modern_nca": None,
-    "linear": None,
+    "linear": LinearRegression,
     "knn": None,
     "rf": RandomForestRegressor,
     "tabpfn": TabPFNRegressor,
