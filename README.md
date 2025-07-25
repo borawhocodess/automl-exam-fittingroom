@@ -25,12 +25,13 @@ This will train our AutoML system and generate predictions for `X_test`:
 
 ```bash
 uv run python run.py \
-  --task bike_sharing_demand \
   --seed 42 \
-  --fold 1 \
   --datadir data \
+  --task bike_sharing_demand \
+  --fold 1 \
   --output-path preds/bike_sharing_demand/output.npy \
-  --log-level debug
+  --log-level debug \
+  --ask-expert-opinion
 ```
 
 

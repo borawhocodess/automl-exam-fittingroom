@@ -127,16 +127,16 @@ if __name__ == "__main__":
         help=("Random seed for reproducibility"),
     )
     parser.add_argument(
-        "--output-path",
+        "--datadir",
         type=Path,
-        default=None,
-        help=("The path to save the predictions to."),
+        default=DATADIR,
+        help=("The directory where the datasets are stored."),
     )
     parser.add_argument(
         "--task",
         type=str,
         required=True,
-        help="The name of the task to run on.",
+        help=("The name of the task to run on."),
         choices=[
             "bike_sharing_demand",
             "brazilian_houses",
@@ -146,23 +146,23 @@ if __name__ == "__main__":
         ],
     )
     parser.add_argument(
-        "--datadir",
-        type=Path,
-        default=DATADIR,
-        help=("The directory where the datasets are stored."),
-    )
-    parser.add_argument(
         "--fold",
         type=int,
         default=get_default_constant("FOLD"),
         help=("The fold to run on."),
     )
     parser.add_argument(
+        "--output-path",
+        type=Path,
+        default=None,
+        help=("The path to save the predictions to."),
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         choices=["debug", "info", "warning", "error", "critical"],
         default="info",
-        help=("Set the logging level."),
+        help=("The logging level."),
     )
     parser.add_argument(
         "--ask-expert-opinion",
@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     pxp("entering the fittingroom")
 
-    logger.info(f"running task {args.task}\n{args}")
+    logger.info(f"running task {args.task} fold {args.fold} seed {args.seed}")
 
     main(
         seed=args.seed,
