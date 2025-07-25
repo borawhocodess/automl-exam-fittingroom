@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import pandas as pd
-from pathlib import Path
-from dataclasses import dataclass
-
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 

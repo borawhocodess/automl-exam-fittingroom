@@ -7,15 +7,14 @@ import pandas as pd
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
+from fittingroom.meta_learning import extract_meta_features
 from fittingroom.pipeline import (
     select_portfolio,
     fit_model,
     aggregate_predictions,
 )
-
-from fittingroom.meta_learning import extract_meta_features
-
 from fittingroom.utils import get_default_constant
+
 
 logger = logging.getLogger(__name__)
 

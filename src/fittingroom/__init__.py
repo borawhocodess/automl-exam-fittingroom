@@ -1,1 +1,1 @@
-from .fittingroom import FittingRoom # noqa
+from .fittingroom import FittingRoom  # noqa
