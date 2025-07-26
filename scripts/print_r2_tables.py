@@ -43,7 +43,7 @@ def latest_rows(metadata, n, metric_key):
                 safe_float(e.get(metric_key)),
                 safe_float(e.get("fit_duration")),
                 safe_float(e.get("predict_duration")),
-                e.get("output_filename"),
+                e.get("out_filename"),
             )
         )
     return rows
@@ -64,7 +64,7 @@ def best_rows(metadata, metric_key):
                 safe_float(best_entry.get(metric_key)),
                 safe_float(best_entry.get("fit_duration")),
                 safe_float(best_entry.get("predict_duration")),
-                best_entry.get("output_filename"),
+                best_entry.get("out_filename"),
             )
         ]
 
@@ -85,7 +85,7 @@ def best_rows(metadata, metric_key):
                 safe_float(e.get(metric_key)),
                 safe_float(e.get("fit_duration")),
                 safe_float(e.get("predict_duration")),
-                e.get("output_filename"),
+                e.get("out_filename"),
             )
         )
     rows.sort(key=lambda r: r[0])
