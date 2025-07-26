@@ -23,6 +23,7 @@ def get_default_constant(name):
         "LONG_TABLE_CELL_WIDTH": 22,
         "DEFAULT_TABLE_CELL_WIDTH": 12,
         "DEVICE": "cpu",
+        "LOG_LEVEL": "debug",
         "DATA_DIR": "data",
         "PREDICTIONS_DIR": "preds",
         "METADATA_DIR": "metadata",

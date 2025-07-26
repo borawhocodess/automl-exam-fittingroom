@@ -48,9 +48,17 @@ class FittingRoom:
         self._models = [fit_model(name, X_train, y_train) for name in portfolio]
 
         val_preds_list = [m.predict(X_val) for m in self._models]
+
+        for name, preds in zip(portfolio, val_preds_list):
+            model_r2 = r2_score(y_val, preds)
+
+            logger.debug(f"validation r2 for {name}: {model_r2:.{self._precision}f}")
+
         val_preds = aggregate_predictions(val_preds_list)
+
         val_r2 = r2_score(y_val, val_preds)
-        logging.getLogger(__name__).info(f"validation r2: {val_r2:.{self._precision}f}")
+
+        logging.getLogger(__name__).info(f"validation r2 after aggregation: {val_r2:.{self._precision}f}")
 
         return self
 

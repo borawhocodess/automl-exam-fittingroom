@@ -5,6 +5,7 @@ from fittingroom.utils import get_default_constant
 
 def main():
     tasks = get_default_constant("TASKS")
+    log_level = get_default_constant("LOG_LEVEL")
 
     for task in tasks:
         subprocess.run(
@@ -13,6 +14,8 @@ def main():
                 "run.py",
                 "--task",
                 task,
+                "--log-level",
+                log_level,
             ]
         )
 
