@@ -39,20 +39,20 @@ logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 FILE = Path(__file__).absolute().resolve()
-DATADIR = FILE.parent / "data"
 
 
 def main(
     seed: int,
-    output_path: Path,
-    datadir: Path,
+    data_dir: str,
     task: str,
     fold: int,
+    out_dir: str,
+    out_filename: str,
     ask_expert_opinion: bool,
 ):
-    dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
+    data_dir = Path(data_dir)
 
-    logger.info("dataset is going into the fittingroom")
+    dataset = Dataset.load(datadir=data_dir, task=task, fold=fold)
 
     fittingroom = FittingRoom(seed=seed, ask_expert_opinion=ask_expert_opinion)
 
@@ -69,17 +69,16 @@ def main(
         f"total time spent in fitting room: {fit_duration + pred_duration:.{precision}f} s"
     )
 
-    if output_path is None:
-        predictions_dir = get_default_constant("PREDICTIONS_DIR")
-        predictions_dir_path = Path(predictions_dir)
-        predictions_filename = f"{task}_{timestamp}_fold_{fold}.npy"
-        output_path = predictions_dir_path / task / predictions_filename
+    if out_filename is None:
+        out_filename = f"{timestamp}_{task}.npy"
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    out_filepath = Path(out_dir) / task / out_filename
 
-    with output_path.open("wb") as f:
+    out_filepath.parent.mkdir(parents=True, exist_ok=True)
+
+    with out_filepath.open("wb") as f:
         np.save(f, test_preds)
-        logger.info(f"predictions saved to: {output_path}")
+        logger.info(f"predictions saved to: {out_filepath}")
 
     if dataset.y_test is not None:
         r2_test = r2_score(dataset.y_test, test_preds)
@@ -88,11 +87,12 @@ def main(
         # setting for the exam dataset
         logger.info(f"no test set for task {task}")
 
-    metadata_filename = get_default_constant("METADATA_FILENAME")
     metadata_dir = get_default_constant("METADATA_DIR")
-    metadata_dir_path = Path(metadata_dir)
-    metadata_dir_path.mkdir(parents=True, exist_ok=True)
-    metadata_file_path = metadata_dir_path / metadata_filename
+    metadata_filename = get_default_constant("METADATA_FILENAME")
+
+    metadata_filepath = Path(metadata_dir) / metadata_filename
+
+    metadata_filepath.parent.mkdir(parents=True, exist_ok=True)
 
     metadata_entry = {
         "timestamp": timestamp,
@@ -100,20 +100,20 @@ def main(
         "task": task,
         "fold": fold,
         "r2_test": r2_test if dataset.y_test is not None else None,
-        "output_path": str(output_path),
+        "out_filename": out_filename,
         "fit_duration": fit_duration,
         "predict_duration": pred_duration,
     }
 
-    if metadata_file_path.exists():
-        with metadata_file_path.open("r") as f:
+    if metadata_filepath.exists():
+        with metadata_filepath.open("r") as f:
             metadata = json.load(f)
     else:
         metadata = {}
 
     metadata[timestamp] = metadata_entry
 
-    with metadata_file_path.open("w") as f:
+    with metadata_filepath.open("w") as f:
         json.dump(metadata, f, indent=get_default_constant("INDENT"))
 
 
@@ -127,9 +127,9 @@ if __name__ == "__main__":
         help=("Random seed for reproducibility"),
     )
     parser.add_argument(
-        "--datadir",
-        type=Path,
-        default=DATADIR,
+        "--data-dir",
+        type=str,
+        default=get_default_constant("DATA_DIR"),
         help=("The directory where the datasets are stored."),
     )
     parser.add_argument(
@@ -152,10 +152,18 @@ if __name__ == "__main__":
         help=("The fold to run on."),
     )
     parser.add_argument(
-        "--output-path",
-        type=Path,
+        "--out-dir",
+        type=str,
+        default=get_default_constant("PREDICTIONS_DIR"),
+        help=("Directory to save the predictions."),
+    )
+    parser.add_argument(
+        "--out-filename",
+        type=str,
         default=None,
-        help=("The path to save the predictions to."),
+        help=(
+            "Filename to save the predictions. If not given, one will be auto-generated."
+        ),
     )
     parser.add_argument(
         "--log-level",
@@ -180,10 +188,11 @@ if __name__ == "__main__":
 
     main(
         seed=args.seed,
-        output_path=args.output_path,
+        data_dir=args.data_dir,
         task=args.task,
-        datadir=args.datadir,
         fold=args.fold,
+        out_dir=args.out_dir,
+        out_filename=args.out_filename,
         ask_expert_opinion=args.ask_expert_opinion,
     )
 

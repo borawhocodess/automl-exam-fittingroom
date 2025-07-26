@@ -19,6 +19,7 @@ uv run python download-datasets.py
 uv pip install -e .
 ```
 
+
 ## One-click run command
 
 This will train our AutoML system and generate predictions for `X_test`:
@@ -26,12 +27,28 @@ This will train our AutoML system and generate predictions for `X_test`:
 ```bash
 uv run python run.py \
   --seed 42 \
-  --datadir data \
+  --data-dir data \
   --task bike_sharing_demand \
   --fold 1 \
-  --output-path preds/bike_sharing_demand/output.npy \
+  --out-dir preds \
+  --out-filename output.npy \
   --log-level debug \
   --ask-expert-opinion
+```
+
+
+## Other script commands
+
+To run all tasks:
+
+```bash
+uv run python scripts/run_all_tasks.py
+```
+
+To get the latest and best results in comparison to the baselines:
+
+```bash
+uv run python scripts/print_r2_tables.py --baseline
 ```
 
 
@@ -80,6 +97,7 @@ TODO: eval 5 repetitions, different seeds, different folds, average, fill
 | **exam dataset**    | -        | **-** |
 
 The scores listed are the R² values calculated using scikit-learn's `metrics.r2_score`.
+
 
 ## Thanks
 

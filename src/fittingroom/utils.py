@@ -16,17 +16,24 @@ def get_default_constant(name):
     """
     defaults = {
         "SEED": 42,
-        "DEVICE": "cpu",
         "FOLD": 1,
         "TEST_SIZE": 0.2,
-        "PRECISION": 4,
         "INDENT": 4,
+        "PRECISION": 4,
+        "LONG_TABLE_CELL_WIDTH": 22,
+        "DEFAULT_TABLE_CELL_WIDTH": 12,
+        "DEVICE": "cpu",
         "DATA_DIR": "data",
         "PREDICTIONS_DIR": "preds",
         "METADATA_DIR": "metadata",
         "METADATA_FILENAME": "fittingroom_metadata.json",
-        "LONG_TABLE_CELL_WIDTH": 20,
-        "DEFAULT_TABLE_CELL_WIDTH": 12,
+        "TASKS": [
+            "bike_sharing_demand",
+            "brazilian_houses",
+            "superconductivity",
+            "wine_quality",
+            "yprop_4_1",
+        ],
     }
     return defaults.get(name, None)
 
