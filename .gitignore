@@ -9,3 +9,7 @@ __pycache__
 
 # allow predictions.npy to be uploaded and allow eval results to be saved here
 !data/exam_dataset/1/*.npy
+
+*.tsv
+*.tfevents
+*.json
