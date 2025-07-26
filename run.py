@@ -3,14 +3,20 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import warnings
 from pathlib import Path
 
 import numpy as np
+import pytorch_lightning as pl
 from sklearn.metrics import r2_score
 
 from fittingroom import FittingRoom
 from fittingroom.data import Dataset
 from fittingroom.utils import get_default_constant, pxp, run_and_time
+
+# realmlp output suppress
+warnings.simplefilter("ignore", category=FutureWarning)
+logging.getLogger("pytorch_lightning").setLevel(logging.WARNING)
 
 
 class ColorFormatter(logging.Formatter):
