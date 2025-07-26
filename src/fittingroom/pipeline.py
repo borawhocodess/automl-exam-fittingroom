@@ -3,37 +3,13 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from tabpfn import TabPFNRegressor
+
+from fittingroom.model_space import MODEL_PORTFOLIO, SEARCH_SPACES
 
 logger = logging.getLogger(__name__)
-
-MODEL_PORTFOLIO = {
-    "realmlp": LinearRegression,
-    "tabm": None,
-    "lightgbm": None,
-    "catboost": None,
-    "xgboost": None,
-    "modern_nca": None,
-    "linear": None,
-    "knn": None,
-    "rf": RandomForestRegressor,
-    "tabpfn": TabPFNRegressor,
-    # … etc.
-}
-
-SEARCH_SPACES = {
-    "lr": {},
-    "rf": {
-        "n_estimators": [50, 100, 200],
-        "max_depth":   [None, 5, 10],
-    },
-    "tabpfn": {},
-}
 
 
 def select_portfolio(
@@ -119,8 +95,12 @@ def select_portfolio(
 
 
 def build_pipeline(model_name: str, X: pd.DataFrame) -> Pipeline:
-    numeric_cols = [c for c in X.columns if X[c].dtype.name not in ("object", "category", "bool")]
-    categorical_cols = [c for c in X.columns if X[c].dtype.name in ("object", "category", "bool")]
+    numeric_cols = [
+        c for c in X.columns if X[c].dtype.name not in ("object", "category", "bool")
+    ]
+    categorical_cols = [
+        c for c in X.columns if X[c].dtype.name in ("object", "category", "bool")
+    ]
 
     numeric_pipe = Pipeline(
         steps=[
@@ -155,12 +135,37 @@ def build_pipeline(model_name: str, X: pd.DataFrame) -> Pipeline:
     return pipeline
 
 
-def fit_model(model_name: str, X: pd.DataFrame, y: pd.Series):
-    pipe = build_pipeline(model_name, X)
-    pipe.fit(X, y)
+def fit_model(
+    model_name: str,
+    X: pd.DataFrame,
+    y: pd.Series,
+    hpo_method: str = "random",  # can be "random", "hyperband", "sh"
+    seed: int = 0,
+):
+    # doing this here to avoid circular import issues
+    from .hpo import hpo_search
 
-    logger.info(f"fitted model: {model_name}")
+    model_cls = MODEL_PORTFOLIO[model_name]
+    search_space = SEARCH_SPACES.get(model_name, {})
 
+    if not search_space:
+        # No hyperparameter optimization: just fit the pipeline normally
+        pipe = build_pipeline(model_name, X)
+        pipe.fit(X, y)
+        logger.info(f"fitted model without HPO: {model_name}")
+        return pipe
+
+    # Run HPO
+    pipe = hpo_search(
+        model_cls=model_cls,
+        model_name=model_name,
+        X=X,
+        y=y,
+        search_space=search_space,
+        method=hpo_method,
+        seed=seed,
+    )
+    logger.info(f"fitted model with HPO: {model_name}")
     return pipe
 
 
@@ -170,4 +175,3 @@ def aggregate_predictions(preds_list):
     logger.debug(f"aggregated predictions: {aggregated_predictions.shape}")
 
     return aggregated_predictions
-

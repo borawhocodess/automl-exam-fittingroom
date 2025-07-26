@@ -1,4 +1,5 @@
 import datetime
+import logging
 import random
 import time
 from pathlib import Path
@@ -29,6 +30,7 @@ def get_default_constant(name):
         "DEFAULT_TABLE_CELL_WIDTH": 12,
     }
     return defaults.get(name, None)
+
 
 def get_default_device():
     device = get_default_constant("DEVICE")
@@ -78,8 +80,12 @@ def apply_style_to_ax(
     ax.set_xlim(-x_lim, x_lim)
     ax.set_ylim(-y_lim, y_lim)
 
-    ax.axhline(0, color=origin_line_color, linewidth=origin_line_width, alpha=origin_line_alpha)
-    ax.axvline(0, color=origin_line_color, linewidth=origin_line_width, alpha=origin_line_alpha)
+    ax.axhline(
+        0, color=origin_line_color, linewidth=origin_line_width, alpha=origin_line_alpha
+    )
+    ax.axvline(
+        0, color=origin_line_color, linewidth=origin_line_width, alpha=origin_line_alpha
+    )
 
     ax.xaxis.set_major_locator(MaxNLocator(nbins=nbins))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=nbins))
@@ -99,18 +105,23 @@ def apply_style_to_figure(fig, X, y, **kwargs):
 
 
 def print_datasets_overview(
-        datadir = get_default_constant("DATA_DIR"),
-        tasks = ["bike_sharing_demand", "brazilian_houses", "superconductivity", "wine_quality", "yprop_4_1"],
-        fold = get_default_constant("FOLD"),
-        table_cell_width = get_default_constant("DEFAULT_TABLE_CELL_WIDTH"),
-    ):
-
+    datadir=get_default_constant("DATA_DIR"),
+    tasks=[
+        "bike_sharing_demand",
+        "brazilian_houses",
+        "superconductivity",
+        "wine_quality",
+        "yprop_4_1",
+    ],
+    fold=get_default_constant("FOLD"),
+    table_cell_width=get_default_constant("DEFAULT_TABLE_CELL_WIDTH"),
+):
     header_map = {
         "bike_sharing_demand": "bsd",
         "brazilian_houses": "bh",
         "superconductivity": "sc",
         "wine_quality": "wq",
-        "yprop_4_1": "y41"
+        "yprop_4_1": "y41",
     }
 
     rows = ["X_train", "X_test", "y_train", "y_test", "has_nan", "has_cat", "has_bool"]
@@ -119,17 +130,21 @@ def print_datasets_overview(
 
     datadirpath = Path(datadir)
 
-    datasets = {
-        task: Dataset.load(datadirpath, task, fold) for task in tasks
-    }
+    datasets = {task: Dataset.load(datadirpath, task, fold) for task in tasks}
 
-    header = f"{'':<{width}}" + "".join(f"{header_map[task]:<{width}}" for task in tasks)
+    header = f"{'':<{width}}" + "".join(
+        f"{header_map[task]:<{width}}" for task in tasks
+    )
     print(header)
 
     for row in rows:
         line = f"{row:<{width}}"
         for task in tasks:
-            data = getattr(datasets[task], row) if row in ["X_train", "X_test", "y_train", "y_test"] else None
+            data = (
+                getattr(datasets[task], row)
+                if row in ["X_train", "X_test", "y_train", "y_test"]
+                else None
+            )
             if row in ["X_train", "X_test", "y_train", "y_test"]:
                 shape = str(data.shape) if data is not None else "None"
                 line += f"{shape:<{width}}"
@@ -137,9 +152,28 @@ def print_datasets_overview(
                 has_nan = datasets[task].X_train.isnull().any().any()
                 line += f"{str(has_nan):<{width}}"
             elif row == "has_cat":
-                has_cat = any(datasets[task].X_train.dtypes == "object") or any(d.name == "category" for d in datasets[task].X_train.dtypes)
+                has_cat = any(datasets[task].X_train.dtypes == "object") or any(
+                    d.name == "category" for d in datasets[task].X_train.dtypes
+                )
                 line += f"{str(has_cat):<{width}}"
             elif row == "has_bool":
                 has_bool = any(d.name == "bool" for d in datasets[task].X_train.dtypes)
                 line += f"{str(has_bool):<{width}}"
         print(line)
+
+
+class ColorFormatter(logging.Formatter):
+    RESET = "\033[0m"
+    COLORS = {
+        logging.DEBUG: "\033[36m",  # Cyan
+        logging.INFO: "\033[32m",  # Green
+        logging.WARNING: "\033[33m",  # Yellow
+        logging.ERROR: "\033[31m",  # Red
+        logging.CRITICAL: "\033[41m",  # Red background
+    }
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, self.RESET)
+        formatted = super().format(record)
+        prefix, _, message = formatted.partition(": ")
+        return f"{color}{prefix}:{self.RESET} {message}{self.RESET}"
