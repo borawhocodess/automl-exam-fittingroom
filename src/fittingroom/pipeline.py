@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 import torch
+from pytabkit import RealMLP_TD_Regressor
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
@@ -23,7 +24,7 @@ MODEL_PORTFOLIO = {
     "tabpfn": TabPFNRegressor,
     "nanotabpfn": None,
     "tabdpt": None,
-    "realmlp": None,
+    "realmlp": RealMLP_TD_Regressor,
     "modern_nca": None,
     "tabm": None,
 }
@@ -56,6 +57,14 @@ def select_portfolio(
     portfolio_to_choose = {k: v for k, v in portfolio.items() if v is not None}
 
     logger.debug(f"available portfolio: {list(portfolio_to_choose.keys())}")
+
+    hack = list(portfolio_to_choose.keys())
+    if "tabpfn" in hack:
+        hack.remove("tabpfn")
+
+    logger.debug(f"hack portfolio: {hack}")
+
+    return hack
 
     chosen = set(portfolio_to_choose)
 
@@ -174,12 +183,19 @@ def build_pipeline(model_name: str, X: pd.DataFrame) -> Pipeline:
     model = MODEL_PORTFOLIO[model_name]
     estimator = model()
 
-    pipeline = Pipeline(
-        steps=[
-            ("prep", preprocessor),
-            ("model", estimator),
-        ]
-    )
+    if model_name == "realmlp":
+        pipeline = Pipeline(
+            [
+                ("model", estimator),
+            ]
+        )
+    else:
+        pipeline = Pipeline(
+            [
+                ("prep", preprocessor),
+                ("model", estimator),
+            ]
+        )
 
     return pipeline
 
