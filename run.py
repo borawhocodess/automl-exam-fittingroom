@@ -10,27 +10,10 @@ from sklearn.metrics import r2_score
 
 from fittingroom import FittingRoom
 from fittingroom.data import Dataset
-from fittingroom.utils import get_default_constant, run_and_time
-
-
-class ColorFormatter(logging.Formatter):
-    RESET = "\033[0m"
-    COLORS = {
-        logging.DEBUG: "\033[36m",     # Cyan
-        logging.INFO: "\033[32m",      # Green
-        logging.WARNING: "\033[33m",   # Yellow
-        logging.ERROR: "\033[31m",     # Red
-        logging.CRITICAL: "\033[41m",  # Red background
-    }
-
-    def format(self, record):
-        color = self.COLORS.get(record.levelno, self.RESET)
-        formatted = super().format(record)
-        prefix, _, message = formatted.partition(": ")
-        return f"{color}{prefix}:{self.RESET} {message}{self.RESET}"
+from fittingroom.utils import ColorFormatter, get_default_constant, run_and_time
 
 handler = logging.StreamHandler()
-formatter = ColorFormatter('%(levelname)s:%(name)s: %(message)s')
+formatter = ColorFormatter("%(levelname)s:%(name)s: %(message)s")
 handler.setFormatter(formatter)
 logging.getLogger().handlers = [handler]
 logging.getLogger().setLevel(logging.INFO)
@@ -53,14 +36,22 @@ def main(
 
     logger.info("dataset is going into the fittingroom")
 
-    fittingroom = FittingRoom(seed=seed, ask_expert_opinion=ask_expert_opinion)
+    fittingroom = FittingRoom(
+        seed=seed, ask_expert_opinion=ask_expert_opinion, hpo_method=args.hpo_method
+    )
 
-    (fittingroom, fit_duration, _) = run_and_time(fittingroom.fit, dataset.X_train, dataset.y_train)
-    (test_preds, pred_duration, timestamp) = run_and_time(fittingroom.predict, dataset.X_test)
+    (fittingroom, fit_duration, _) = run_and_time(
+        fittingroom.fit, dataset.X_train, dataset.y_train
+    )
+    (test_preds, pred_duration, timestamp) = run_and_time(
+        fittingroom.predict, dataset.X_test
+    )
 
     precision = get_default_constant("PRECISION")
 
-    logger.info(f"total time spent in fitting room: {fit_duration+pred_duration:.{precision}f} s")
+    logger.info(
+        f"total time spent in fitting room: {fit_duration + pred_duration:.{precision}f} s"
+    )
 
     if output_path is None:
         predictions_dir = get_default_constant("PREDICTIONS_DIR")
@@ -111,24 +102,19 @@ def main(
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "--seed",
         type=int,
         default=get_default_constant("SEED"),
-        help=(
-            "Random seed for reproducibility"
-        ),
+        help=("Random seed for reproducibility"),
     )
     parser.add_argument(
         "--output-path",
         type=Path,
         default=None,
-        help=(
-            "The path to save the predictions to."
-        ),
+        help=("The path to save the predictions to."),
     )
     parser.add_argument(
         "--task",
@@ -147,39 +133,39 @@ if __name__ == "__main__":
         "--datadir",
         type=Path,
         default=DATADIR,
-        help=(
-            "The directory where the datasets are stored."
-        ),
+        help=("The directory where the datasets are stored."),
     )
     parser.add_argument(
         "--fold",
         type=int,
         default=get_default_constant("FOLD"),
-        help=(
-            "The fold to run on."
-        ),
+        help=("The fold to run on."),
     )
     parser.add_argument(
         "--log-level",
         type=str,
         choices=["debug", "info", "warning", "error", "critical"],
         default="info",
-        help="Set the logging level."
+        help="Set the logging level.",
     )
     parser.add_argument(
         "--ask-expert-opinion",
         action="store_true",
         help="Whether to ask for expert opinion before making choices.",
     )
+    parser.add_argument(
+        "--hpo-method",
+        type=str,
+        choices=["random", "hyperband", "sh"],
+        default="random",
+        help="The hyperparameter optimization method to use.",
+    )
 
     args = parser.parse_args()
     level = getattr(logging, args.log_level.upper())
     logging.getLogger().setLevel(level)
 
-    logger.info(
-        f"running task {args.task}"
-        f"\n{args}"
-    )
+    logger.info(f"running task {args.task}\n{args}")
 
     main(
         seed=args.seed,
