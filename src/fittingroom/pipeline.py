@@ -94,7 +94,18 @@ def select_portfolio(
     return chosen_portfolio
 
 
-def build_pipeline(model_name: str, X: pd.DataFrame) -> Pipeline:
+def build_pipeline(model_name: str, X: pd.DataFrame, params: dict = None) -> Pipeline:
+    """
+    Builds a sklearn pipeline with preprocessing and model instantiation.
+
+    Args:
+        model_name (str): The name of the model from MODEL_PORTFOLIO.
+        X (pd.DataFrame): The feature data used to determine column types.
+        params (dict, optional): Parameters to pass to the model constructor.
+
+    Returns:
+        sklearn.Pipeline: The preprocessing + model pipeline.
+    """
     numeric_cols = [
         c for c in X.columns if X[c].dtype.name not in ("object", "category", "bool")
     ]
@@ -122,8 +133,8 @@ def build_pipeline(model_name: str, X: pd.DataFrame) -> Pipeline:
         ]
     )
 
-    model = MODEL_PORTFOLIO[model_name]
-    estimator = model()
+    model_cls = MODEL_PORTFOLIO[model_name]
+    estimator = model_cls(**(params or {}))
 
     pipeline = Pipeline(
         steps=[
@@ -156,7 +167,7 @@ def fit_model(
         return pipe
 
     # Run HPO
-    pipe = hpo_search(
+    params = hpo_search(
         model_cls=model_cls,
         model_name=model_name,
         X=X,
@@ -165,8 +176,11 @@ def fit_model(
         method=hpo_method,
         seed=seed,
     )
-    logger.info(f"fitted model with HPO: {model_name}")
-    return pipe
+    logger.info(f"best params found from hpo search: {params}")
+
+    pipeline = build_pipeline(model_name, X, params)
+    pipeline.fit(X, y)
+    return pipeline
 
 
 def aggregate_predictions(preds_list):
