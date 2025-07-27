@@ -24,9 +24,9 @@ MODEL_PORTFOLIO = {
     "lightgbm": LGBMRegressor,
     "xgboost": None,
     "modern_nca": None,
-    "linear": None,
+    "linear": LinearRegression,
     "knn": None,
-    "randomforest": None,
+    "randomforest": RandomForestRegressor,
     "tabpfn": None,
 }
 

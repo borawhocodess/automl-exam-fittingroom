@@ -2,14 +2,17 @@ import logging
 from typing import Any, Callable, Dict, Optional
 
 import optuna
+import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
+from scipy.optimize import minimize
 
 from .model_space import MODEL_PORTFOLIO
 from .pipeline import build_pipeline
 from .utils import get_default_constant
+from tabpfn import TabPFNRegressor
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +36,8 @@ def hpo_search(
         pruner = optuna.pruners.SuccessiveHalvingPruner()
     elif method == "hyperband":
         pruner = optuna.pruners.HyperbandPruner()
+    elif method == "bayesian":
+        return _run_bo(model_cls, model_name, X, y, search_space, seed, method=method)
     else:
         raise ValueError(f"Unknown HPO method: '{method}'")
 
@@ -160,4 +165,164 @@ def _run_optuna(
     pipe.steps[-1] = ("model", best_model)
     pipe.fit(X, y)
 
-    return pipe
+    return
+
+
+def _run_bo(
+    model_cls: Callable[..., BaseEstimator],
+    model_name: str,
+    X: pd.DataFrame,
+    y: pd.Series,
+    search_space: Dict[str, Any],
+    seed: int,
+    method: str = "bayesian",
+    n_trials: int = 20,
+):
+
+    logger = logging.getLogger(__name__)
+    print("A")
+    def decode_param_dict(x_dict, search_space):
+        # Reverse one-hot encoding to original param dict
+        decoded = {}
+        for param, spec in search_space.items():
+            if param == "__static__":
+                continue
+            if isinstance(spec, dict):
+                if "condition" in spec:
+                    cond_key, cond_val = list(spec["condition"].items())[0]
+                    if decoded.get(cond_key) != cond_val:
+                        continue
+                param_type = spec["type"]
+                bounds = spec["bounds"]
+            else:
+                param_type = "categorical"
+                bounds = spec
+            if param_type == "categorical":
+                prefix = param + "_"
+                found = False
+                for b in bounds:
+                    col = f"{param}_{b}"
+                    if col in x_dict and x_dict[col] > 0.5:
+                        decoded[param] = b
+                        found = True
+                        break
+                if not found and param in x_dict:
+                    decoded[param] = x_dict[param]
+            else:
+                if param in x_dict:
+                    decoded[param] = x_dict[param]
+        return decoded
+
+    test_size = get_default_constant("TEST_SIZE")
+    init_samples = 5
+
+    print(f"Running Bayesian HPO for {model_name} with {n_trials} trials...")
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=test_size, random_state=seed
+    )
+    print(f"Train shape: {X_train.shape}, Val shape: {X_val.shape}")
+    def sample_params():
+        params = {}
+        for param, spec in search_space.items():
+            if param == "__static__":
+                continue
+            if isinstance(spec, dict):
+                if "condition" in spec:
+                    cond_key, cond_val = list(spec["condition"].items())[0]
+                    if params.get(cond_key) != cond_val:
+                        continue
+                param_type = spec["type"]
+                bounds = spec["bounds"]
+            else:
+                param_type = "categorical"
+                bounds = spec
+
+            if param_type == "float_log":
+                params[param] = np.exp(
+                    np.random.uniform(np.log(bounds[0]), np.log(bounds[1]))
+                )
+            elif param_type == "float":
+                params[param] = np.random.uniform(bounds[0], bounds[1])
+            elif param_type == "int":
+                params[param] = np.random.randint(bounds[0], bounds[1] + 1)
+            elif param_type == "categorical":
+                params[param] = np.random.choice(bounds)
+        return params
+
+    # Initial random samples
+    param_list = [sample_params() for _ in range(init_samples)]
+    score_list = []
+    
+    for p in param_list:
+        print("A")
+        pipe = build_pipeline(model_name, X_train)
+        print("B")
+        model = model_cls(**p)
+        print("C")
+        pipe.steps[-1] = ("model", model)
+        print("D")
+        print(f"Trying params: {p}")
+        pipe.fit(X_train, y_train)
+        print("E")
+        preds = pipe.predict(X_val)
+        print("F")
+        score = r2_score(y_val, preds)
+        print("G")
+        score_list.append(score)
+
+    print(f"Initial samples: {len(param_list)}, scores: {score_list}")
+    X_meta = pd.DataFrame(param_list).fillna("None")
+    X_meta = pd.get_dummies(X_meta).astype(np.float32)
+    y_meta = np.array(score_list)
+    print(f"Initial meta features shape: {X_meta.shape}, scores: {y_meta.shape}")
+    print(X_meta)
+    print(y_meta)
+    reg = TabPFNRegressor(device="cpu", fit_mode="low_memory")
+    
+    print(X_meta.shape, y_meta.shape)
+    reg.fit(X_meta, y_meta)
+    print("Fitted TabPFNRegressor on initial samples")
+
+    def acq_func(x_np):
+        x_df = pd.DataFrame([x_np], columns=X_meta.columns)
+        pred = reg.predict(
+            x_df.values, output_type="quantiles", quantiles=[0.1, 0.5, 0.9]
+        )
+        mean, std = pred[1], (pred[2] - pred[0]) / 2
+        eta = max(y_meta)
+        z = (mean - eta) / std if std > 1e-8 else 0.0
+        from scipy.stats import norm
+
+        return -(std * (z * norm.cdf(z) + norm.pdf(z)))
+
+    best_score = -np.inf
+    best_param = None
+
+    for _ in range(n_trials - init_samples):
+        x0 = X_meta.iloc[np.random.randint(len(X_meta))].values
+        res = minimize(acq_func, x0, method="L-BFGS-B")
+        x_next = res.x
+        x_dict = dict(zip(X_meta.columns, x_next))
+        x_decoded = decode_param_dict(x_dict, search_space)
+
+        pipe = build_pipeline(model_name, X_train)
+        model = model_cls(**x_decoded)
+        pipe.steps[-1] = ("model", model)
+        pipe.fit(X_train, y_train)
+        preds = pipe.predict(X_val)
+        score = r2_score(y_val, preds)
+
+        param_list.append(x_decoded)
+        score_list.append(score)
+
+        X_meta = pd.DataFrame(param_list).fillna("None")
+        X_meta = pd.get_dummies(X_meta).astype(np.float32)
+        y_meta = np.array(score_list)
+        reg.fit(X_meta, y_meta)
+
+        if score > best_score:
+            best_score = score
+            best_param = x_decoded
+
+    logger.info(f"Best score with TabPFN-BO: {best_score}")
+    logger.info(f"Best params: {best_param}")
