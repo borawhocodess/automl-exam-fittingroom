@@ -4,7 +4,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from tabpfn import TabPFNRegressor
 
-"""
 MODEL_PORTFOLIO = {
     "realmlp": None,
     "tabm": None,
@@ -16,21 +15,19 @@ MODEL_PORTFOLIO = {
     "knn": None,
     "randomforest": RandomForestRegressor,
     "tabpfn": None,
-}"""
-MODEL_PORTFOLIO = {
-    "realmlp": None,
-    "tabm": None,
-    "catboost": None,
-    "lightgbm": LGBMRegressor,
-    "xgboost": None,
-    "modern_nca": None,
-    "linear": None,
-    "knn": None,
-    "randomforest": None,
-    "tabpfn": None,
 }
 
-# place conditionals at the end.
+FIDELITY_MAP = {
+    "lightgbm": "n_estimators",
+    "catboost": "n_estimators",
+    "randomforest": "n_estimators",
+    "realmlp": "epochs",
+    "tabm": "epochs",
+    "modern_nca": "epochs",
+    "xgboost": "n_estimators",
+}
+
+# place conditionals at the end. always.
 SEARCH_SPACES = {
     "lr": {
         "fit_intercept": {"type": "categorical", "bounds": [True, False]},
@@ -42,7 +39,10 @@ SEARCH_SPACES = {
     },
     "tabpfn": {},
     "catboost": {
-        "iterations": {"type": "int", "bounds": (200, 1000), "__fidelity__": True},
+        "__static__": {
+            "verbose": False,
+        },
+        "n_estimators": {"type": "int", "bounds": (200, 1000), "__fidelity__": True},
         "learning_rate": {"type": "float_log", "bounds": (1e-3, 0.3)},
         "depth": {"type": "int", "bounds": (4, 10)},
         "l2_leaf_reg": {"type": "float", "bounds": (1.0, 10.0)},
