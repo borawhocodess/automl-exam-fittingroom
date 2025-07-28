@@ -41,8 +41,10 @@ class FittingRoom:
         )
 
         meta_features = extract_meta_features(X_train, y_train)
+
         portfolio = select_portfolio(
-            meta_features, ask_expert_opinion=self.ask_expert_opinion
+            meta_features=meta_features,
+            ask_expert_opinion=self.ask_expert_opinion
         )
 
         self._models = [fit_model(name, X_train, y_train) for name in portfolio]

@@ -21,6 +21,8 @@ dependencies = [
   "torch>=2.7.1",
   "tabpfn>=2.1.0",
   "matplotlib>=3.10.3",
+  "catboost>=1.2.8",
+  "pytabkit>=1.5.2",
 ]
 
 classifiers = [

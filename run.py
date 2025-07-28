@@ -175,7 +175,7 @@ if __name__ == "__main__":
         "--log-level",
         type=str,
         choices=["debug", "info", "warning", "error", "critical"],
-        default="info",
+        default=get_default_constant("LOG_LEVEL"),
         help=("The logging level."),
     )
     parser.add_argument(

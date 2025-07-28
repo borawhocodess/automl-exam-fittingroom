@@ -11,16 +11,17 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from tabpfn import TabPFNRegressor
+from catboost import CatBoostRegressor
 
 logger = logging.getLogger(__name__)
 
 MODEL_PORTFOLIO = {
-    "linear": LinearRegression,
+    "linear": None,
     "knn": None,
-    "rf": RandomForestRegressor,
+    "rf": None,
     "xgboost": None,
     "lightgbm": None,
-    "catboost": None,
+    "catboost": CatBoostRegressor,
     "tabpfn": TabPFNRegressor,
     "nanotabpfn": None,
     "tabdpt": None,
@@ -58,7 +59,12 @@ def select_portfolio(
 
     logger.debug(f"available portfolio: {list(portfolio_to_choose.keys())}")
 
-    hack = list(portfolio_to_choose.keys())
+    all = list(portfolio_to_choose.keys())
+
+    logger.debug(f"all portfolio: {all}")
+
+    hack = all
+
     if "tabpfn" in hack:
         hack.remove("tabpfn")
 
@@ -181,15 +187,31 @@ def build_pipeline(model_name: str, X: pd.DataFrame) -> Pipeline:
     )
 
     model = MODEL_PORTFOLIO[model_name]
-    estimator = model()
 
-    if model_name == "realmlp":
+    if model_name == "catboost":
+        cat_indices = [X.columns.get_loc(col) for col in categorical_cols]
+        estimator = model(cat_features=cat_indices, logging_level="Silent")
+        pipeline = Pipeline(
+            [
+                ("model", estimator),
+            ]
+        )
+    elif model_name == "tabpfn":
+        estimator = model(ignore_pretraining_limits=True)
+        pipeline = Pipeline(
+            [
+                ("model", estimator),
+            ]
+        )
+    elif model_name == "realmlp":
+        estimator = model()
         pipeline = Pipeline(
             [
                 ("model", estimator),
             ]
         )
     else:
+        estimator = model()
         pipeline = Pipeline(
             [
                 ("prep", preprocessor),

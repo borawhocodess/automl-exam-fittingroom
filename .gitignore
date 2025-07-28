@@ -8,6 +8,8 @@ uv.lock
 
 .DS_Store
 
+/catboost_info
+
 /metadata
 /preds
 
