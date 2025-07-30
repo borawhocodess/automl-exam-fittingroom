@@ -4,6 +4,8 @@
 *.egg-info
 __pycache__
 
+uv.lock
+
 /metadata
 /preds
 
