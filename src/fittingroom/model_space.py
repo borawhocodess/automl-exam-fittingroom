@@ -1,20 +1,20 @@
 from catboost import CatBoostRegressor
 from lightgbm import LGBMRegressor
+from xgboost import XGBRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from tabpfn import TabPFNRegressor
+from pytabkit import TabM_HPO_Regressor
+from pytabkit import RealMLP_HPO_Regressor
 
 MODEL_PORTFOLIO = {
-    "realmlp": None,
-    "tabm": None,
+    "lr": LinearRegression,
+    "randomforest": RandomForestRegressor,
     "catboost": CatBoostRegressor,
     "lightgbm": LGBMRegressor,
-    "xgboost": None,
-    "modern_nca": None,
-    "linear": LinearRegression,
-    "knn": None,
-    "randomforest": RandomForestRegressor,
-    "tabpfn": None,
+    "xgboost": XGBRegressor,
+    "realmlp": RealMLP_HPO_Regressor,
+    "tabm": TabM_HPO_Regressor,
 }
 
 FIDELITY_MAP = {
@@ -34,8 +34,7 @@ SEARCH_SPACES = {
         "positive": {"type": "categorical", "bounds": [True, False]},
     },
     "randomforest": {
-        "n_estimators": {"type": "categorical", "bounds": [50, 100, 200]},
-        "max_depth": {"type": "categorical", "bounds": [None, 5, 10]},
+        "n_estimators": {"type": "int", "bounds": (50, 1000), "__fidelity__": True},
     },
     "tabpfn": {},
     "catboost": {
@@ -104,4 +103,46 @@ SEARCH_SPACES = {
             "condition": {"boosting_type": "gbdt"},
         },
     },
+    "xgboost": {
+        "__static__": {
+            "enable_categorical": True,
+            "objective": "reg:squarederror",
+            "verbosity": 0,
+            "tree_method": "auto",  # could also be gpu_hist if using GPU
+        },
+        "n_estimators": {"type": "int", "bounds": (200, 1000), "__fidelity__": True},
+        "learning_rate": {"type": "float_log", "bounds": (1e-3, 0.3)},
+        "max_depth": {"type": "int", "bounds": (3, 12)},
+        "min_child_weight": {"type": "float_log", "bounds": (1e-2, 10.0)},
+        "gamma": {"type": "float", "bounds": (0.0, 5.0)},  # aka min_split_loss
+        "subsample": {"type": "float", "bounds": (0.5, 1.0)},
+        "colsample_bytree": {"type": "float", "bounds": (0.5, 1.0)},
+        "reg_alpha": {"type": "float_log", "bounds": (1e-8, 10.0)},
+        "reg_lambda": {"type": "float_log", "bounds": (1e-8, 10.0)},
+        "booster": {
+            "type": "categorical",
+            "bounds": ["gbtree", "dart"],
+        },
+        "rate_drop": {
+            "type": "float",
+            "bounds": (0.0, 0.3),
+            "condition": {"booster": "dart"},
+        },
+        "skip_drop": {
+            "type": "float",
+            "bounds": (0.0, 0.3),
+            "condition": {"booster": "dart"},
+        },
+    },
+    "realmlp": {
+        'hpo_space_name': 'tabarena',
+        'verbosity': 1,
+        'n_threads': 1
+    },
+    "tabm": {
+        'hpo_space_name': 'tabarena',
+        'verbosity': 1,
+        'n_threads': 1
+    }
 }
+

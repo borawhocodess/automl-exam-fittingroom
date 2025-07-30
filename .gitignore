@@ -13,3 +13,4 @@ __pycache__
 *.tsv
 *.tfevents
 *.json
+*.ipynb

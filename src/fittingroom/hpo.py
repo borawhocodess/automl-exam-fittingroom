@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 
 from fittingroom.model_space import FIDELITY_MAP
 from fittingroom.utils import get_default_constant
+from pytabkit import RealMLP_HPO_Regressor, TabM_HPO_Regressor
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,11 @@ def hpo_search(
     """
     Main HPO method. Selects the pruner (and sampler), then kicks off tuning.
     """
+    print(f"Starting HPO for {model_name} using {method} method...")
     # choose pruner
-    if method == "random":
+    if model_name == "realmlp" or model_name == "tabm":
+        return _run_pytabkit_hpo(model_name=model_name, n_trials=n_trials, X=X, y=y)
+    elif method == "random":
         pruner = None
         sampler = optuna.samplers.RandomSampler(seed=seed)
     elif method == "sh":
@@ -39,7 +43,7 @@ def hpo_search(
         pruner = optuna.pruners.HyperbandPruner()
         sampler = optuna.samplers.TPESampler(seed=seed)
     else:
-        raise ValueError(f"Unknown HPO method: '{method}'")
+        raise ValueError(f"Unsupported HPO method: {method}")
 
     return _run_optuna(
         model_cls=model_cls,
@@ -53,6 +57,30 @@ def hpo_search(
         method=method,
         n_trials=n_trials,
     )
+
+def _run_pytabkit_hpo(model_name: str, n_trials: int, X: pd.DataFrame, y: pd.Series):
+    """
+    Launch PyTabKit internal HPO for RealMLP or TabM.
+    """
+    n_trials = 8
+    params = {
+            'n_hyperopt_steps': n_trials,
+            'hpo_space_name': 'tabarena',
+            'verbosity': 1,
+            'n_threads': 1
+    }    
+    print(f"Running PyTabKit HPO for {model_name} with params: {params}")
+
+    if model_name == "realmlp":
+        model = RealMLP_HPO_Regressor(**params)
+        model.fit(X, y)
+        return model
+    elif model_name == "tabm":
+        model = TabM_HPO_Regressor(**params)
+        model.fit(X, y)
+        return model
+    else:
+        raise ValueError(f"Unsupported PyTabKit model: '{model_name}'")
 
 
 def _run_optuna(
@@ -86,6 +114,7 @@ def _run_optuna(
 
     def objective(trial: optuna.Trial) -> float:
         params = _sample_params(trial, search_space)
+        logger.debug(f"Trial {trial.number} sampled params: {params}")
         score = _evaluate_model(
             trial=trial,
             params=params,
@@ -570,3 +599,4 @@ def _estimate_saved_time(step: int, max_budget: int, elapsed: float) -> float:
     per_unit = elapsed / float(step)
     remaining = max(0, int(max_budget) - int(step))
     return max(0.0, remaining * per_unit)
+
