@@ -165,6 +165,11 @@ def fit_model(
         pipe.fit(X, y)
         logger.info(f"fitted model without HPO: {model_name}")
         return pipe
+    
+    if model_name in ["tabm", "realmlp"]:
+        return hpo_search(
+            model_cls, model_name, X, y, search_space, hpo_method, seed
+        )
 
     # Run HPO
     params = hpo_search(
@@ -177,7 +182,6 @@ def fit_model(
         seed=seed,
     )
     logger.info(f"best params found from hpo search: {params}")
-
     pipeline = build_pipeline(model_name, X, params)
     pipeline.fit(X, y)
     return pipeline
