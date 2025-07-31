@@ -17,7 +17,7 @@ def get_default_constant(name):
     defaults = {
         "SEED": 42,
         "FOLD": 1,
-        "TEST_SIZE": 0.2,
+        "TEST_SIZE": 0.1,
         "INDENT": 4,
         "PRECISION": 4,
         "LONG_TABLE_CELL_WIDTH": 22,
