@@ -22,6 +22,9 @@ def get_default_constant(name):
         "TEST_SIZE": 0.2,
         "PRECISION": 4,
         "INDENT": 4,
+
+        "HPO_N_TRIALS": 3, # TODO: make 30 again and make it configurable
+
         "DATA_DIR": "data",
         "PREDICTIONS_DIR": "preds",
         "METADATA_DIR": "metadata",

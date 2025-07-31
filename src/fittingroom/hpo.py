@@ -15,6 +15,8 @@ from pytabkit import RealMLP_HPO_Regressor, TabM_HPO_Regressor
 
 logger = logging.getLogger(__name__)
 
+# suppress optuna logs
+optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 def hpo_search(
     model_cls: Callable[..., BaseEstimator],
@@ -23,13 +25,13 @@ def hpo_search(
     y: pd.Series,
     search_space: Dict[str, Any],
     method: str = "random",  # options: "random", "sh", "hyperband"
-    seed: int = 7,
-    n_trials: int = 30,
+    seed: int = get_default_constant("SEED"),
+    n_trials: int = get_default_constant("HPO_N_TRIALS"),
 ):
     """
     Main HPO method. Selects the pruner (and sampler), then kicks off tuning.
     """
-    print(f"Starting HPO for {model_name} using {method} method...")
+    logger.info(f"Starting HPO for {model_name} using {method} method...")
     # choose pruner
     if model_name == "realmlp" or model_name == "tabm":
         return _run_pytabkit_hpo(model_name=model_name, n_trials=n_trials, X=X, y=y)
@@ -62,14 +64,14 @@ def _run_pytabkit_hpo(model_name: str, n_trials: int, X: pd.DataFrame, y: pd.Ser
     """
     Launch PyTabKit internal HPO for RealMLP or TabM.
     """
-    n_trials = 8
+    n_trials = get_default_constant("HPO_N_TRIALS")
     params = {
             'n_hyperopt_steps': n_trials,
             'hpo_space_name': 'tabarena',
             'verbosity': 1,
             'n_threads': 1
-    }    
-    print(f"Running PyTabKit HPO for {model_name} with params: {params}")
+    }
+    logger.info(f"Running PyTabKit HPO for {model_name} with params: {params}")
 
     if model_name == "realmlp":
         model = RealMLP_HPO_Regressor(**params)
@@ -93,7 +95,7 @@ def _run_optuna(
     pruner: Optional[optuna.pruners.BasePruner] = None,
     sampler: Optional[optuna.samplers.BaseSampler] = None,
     method: str = "optuna",
-    n_trials: int = 30,
+    n_trials: int = get_default_constant("HPO_N_TRIALS"),
 ):
     """
     Wraps the Optuna study logic and kicks off the optimization process.
@@ -239,8 +241,9 @@ def training_with_optuna_fidelity(
     y_val: pd.Series,
 ) -> float:
     """
-    Automatically chooses a fidelity knob per model, trains, and feeds intermediate R^2
-    to Optuna so SH/Hyperband can prune. If staging is not feasible it falls back to fitting once.
+    Automatically chooses a fidelity knob per model, trains, and feeds
+    intermediate R^2 to Optuna so SH/Hyperband can prune.
+    If staging is not feasible it falls back to fitting once.
     Returns the final R^2 on the validation set.
     """
     # TODO: remove if pipeline thing changes

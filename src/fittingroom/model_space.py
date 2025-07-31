@@ -8,13 +8,13 @@ from pytabkit import TabM_HPO_Regressor
 from pytabkit import RealMLP_HPO_Regressor
 
 MODEL_PORTFOLIO = {
-    "lr": LinearRegression,
-    "randomforest": RandomForestRegressor,
-    "catboost": CatBoostRegressor,
+    # "lr": LinearRegression,
+    # "randomforest": RandomForestRegressor,
+    # "catboost": CatBoostRegressor,
     "lightgbm": LGBMRegressor,
     "xgboost": XGBRegressor,
-    "realmlp": RealMLP_HPO_Regressor,
-    "tabm": TabM_HPO_Regressor,
+    # "realmlp": RealMLP_HPO_Regressor,
+    # "tabm": TabM_HPO_Regressor,
 }
 
 FIDELITY_MAP = {
