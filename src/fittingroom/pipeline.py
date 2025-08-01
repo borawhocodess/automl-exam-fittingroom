@@ -20,7 +20,8 @@ def select_portfolio(
     If ask_expert_opinion is True, prompt before each modification.
     """
     portfolio_to_choose = {k: v for k, v in portfolio.items() if v is not None}
-    print(f"Available models: {list(portfolio_to_choose.keys())}")
+
+    logger.info(f"Available models: {list(portfolio_to_choose.keys())}")
 
     # hack = list(portfolio_to_choose.keys())
 
@@ -189,7 +190,7 @@ def fit_model(
         method=hpo_method,
         seed=seed,
     )
-    logger.info(f"best params found from hpo search: {params}")
+    logger.debug(f"best params found from hpo search: {params}")
     pipeline = build_pipeline(model_name, X, params)
     pipeline.fit(X, y)
     return pipeline

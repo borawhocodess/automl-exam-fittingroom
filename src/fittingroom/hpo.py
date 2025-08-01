@@ -31,7 +31,7 @@ def hpo_search(
     """
     Main HPO method. Selects the pruner (and sampler), then kicks off tuning.
     """
-    logger.info(f"Starting HPO for {model_name} using {method} method...")
+    logger.debug(f"Starting HPO for {model_name} using {method} method...")
     # choose pruner
     if model_name == "realmlp" or model_name == "tabm":
         return _run_pytabkit_hpo(model_name=model_name, n_trials=n_trials, X=X, y=y)
@@ -105,7 +105,7 @@ def _run_optuna(
     test_size = get_default_constant("TEST_SIZE")
 
     study_name = f"{model_name}_{method}_study"
-    logger.info(f"Starting HPO for {model_name} using {method}...")
+    logger.debug(f"Starting HPO for {model_name} using {method}...")
 
     study = optuna.create_study(
         direction="maximize",  # we maximize R^2 everywhere we report.
@@ -279,7 +279,7 @@ def training_with_optuna_fidelity(
             model_name=model_name,
         )
 
-    logger.info(f"{model_name}: Using fidelity '{fid_key}' with budget={max_budget}.")
+    logger.debug(f"{model_name}: Using fidelity '{fid_key}' with budget={max_budget}.")
     name = model_name.lower()
 
     # 1) Epoch-based models: use epochs as fidelity, checkpoint linearly
@@ -581,7 +581,7 @@ def _report_and_maybe_prune(
     trial.report(score, step=step)
     logger.debug(f"step={step} | R^2={score:.5f} | {msg}")
     if trial.should_prune():
-        logger.info(f"pruned at step={step} with R^2={score:.5f} | {msg}")
+        logger.debug(f"pruned at step={step} with R^2={score:.5f} | {msg}")
         raise optuna.TrialPruned(msg)
     else:
         logger.debug(f"continued at step={step} with R^2={score:.5f} | {msg}")
