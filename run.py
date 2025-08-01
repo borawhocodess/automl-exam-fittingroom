@@ -10,7 +10,7 @@ from sklearn.metrics import r2_score
 
 from fittingroom import FittingRoom
 from fittingroom.data import Dataset
-from fittingroom.utils import ColorFormatter, get_default_constant, run_and_time
+from fittingroom.utils import ColorFormatter, get_default_constant, pxp, run_and_time
 
 handler = logging.StreamHandler()
 formatter = ColorFormatter("%(levelname)s:%(name)s: %(message)s")
@@ -35,8 +35,6 @@ def main(
     add_default_preds_as_features: bool,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
-
-    logger.info("dataset is going into the fittingroom")
 
     fittingroom = FittingRoom(
         seed=seed,
@@ -170,12 +168,14 @@ if __name__ == "__main__":
         action="store_true",
     )
 
-
     args = parser.parse_args()
     level = getattr(logging, args.log_level.upper())
     logging.getLogger().setLevel(level)
 
-    logger.info(f"running task {args.task}\n{args}")
+    pxp("entering thefittingroom")
+
+    logger.info(f"running task {args.task} fold {args.fold} seed {args.seed}")
+    logger.debug(f"running task {args.task}\n{args}")
 
     main(
         seed=args.seed,
@@ -187,3 +187,5 @@ if __name__ == "__main__":
         hpo_method=args.hpo_method,
         add_default_preds_as_features=args.add_default_preds_as_features,
     )
+
+    pxp("left thefittingroom")

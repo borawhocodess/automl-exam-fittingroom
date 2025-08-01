@@ -50,12 +50,28 @@ def set_randomness_seed(seed=get_default_constant("SEED")):
     torch.manual_seed(seed)
 
 
+def pxp(x):
+    """
+    print sandwich
+    """
+    print()
+    print(x)
+    print()
+
+
+def get_timestamp():
+    """
+    returns the current timestamp in the format YYYMMDD_HHMMSS
+    """
+    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
 def run_and_time(func, *args, **kwargs):
     start = time.time()
     result = func(*args, **kwargs)
     end = time.time()
     duration = end - start
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = get_timestamp()
     return result, duration, timestamp
 
 
