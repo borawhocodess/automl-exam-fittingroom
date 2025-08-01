@@ -4,17 +4,27 @@ from xgboost import XGBRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from tabpfn import TabPFNRegressor
-from pytabkit import TabM_HPO_Regressor
-from pytabkit import RealMLP_HPO_Regressor
+from pytabkit import TabM_HPO_Regressor, TabM_D_Regressor
+from pytabkit import RealMLP_HPO_Regressor, RealMLP_TD_Regressor
 
 MODEL_PORTFOLIO = {
     # "lr": LinearRegression,
     # "randomforest": RandomForestRegressor,
-    # "catboost": CatBoostRegressor,
+    "catboost": CatBoostRegressor,
     "lightgbm": LGBMRegressor,
     "xgboost": XGBRegressor,
     # "realmlp": RealMLP_HPO_Regressor,
     # "tabm": TabM_HPO_Regressor,
+}
+
+DEFAULT_MODEL_PORTFOLIO = {
+    # "lr": LinearRegression,
+    # "randomforest": RandomForestRegressor,
+    "catboost": CatBoostRegressor,
+    "lightgbm": LGBMRegressor,
+    "xgboost": XGBRegressor,
+    # "realmlp": RealMLP_TD_Regressor,
+    # "tabm": TabM_D_Regressor,
 }
 
 FIDELITY_MAP = {

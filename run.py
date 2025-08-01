@@ -31,13 +31,18 @@ def main(
     task: str,
     fold: int,
     ask_expert_opinion: bool,
+    hpo_method: str,
+    add_default_preds_as_features: bool,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
     logger.info("dataset is going into the fittingroom")
 
     fittingroom = FittingRoom(
-        seed=seed, ask_expert_opinion=ask_expert_opinion, hpo_method=args.hpo_method
+        seed=seed,
+        ask_expert_opinion=ask_expert_opinion,
+        hpo_method=hpo_method,
+        add_default_preds_as_features=add_default_preds_as_features
     )
 
     (fittingroom, fit_duration, _) = run_and_time(
@@ -160,6 +165,11 @@ if __name__ == "__main__":
         default="random",
         help="The hyperparameter optimization method to use.",
     )
+    parser.add_argument(
+        "--add-default-preds-as-features",
+        action="store_true",
+    )
+
 
     args = parser.parse_args()
     level = getattr(logging, args.log_level.upper())
@@ -174,4 +184,6 @@ if __name__ == "__main__":
         datadir=args.datadir,
         fold=args.fold,
         ask_expert_opinion=args.ask_expert_opinion,
+        hpo_method=args.hpo_method,
+        add_default_preds_as_features=args.add_default_preds_as_features,
     )

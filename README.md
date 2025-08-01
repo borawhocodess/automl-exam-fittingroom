@@ -22,12 +22,19 @@ This will train our AutoML system and generate predictions for `X_test`:
 python run.py \
   --task bike_sharing_demand \
   --seed 42 \
-  --fold 0 \
+  --fold 1 \
   --datadir data \
   --output-path preds/bike_sharing_demand/output.npy \
-  --log-level info
+  --hpo-method hyperband \
+  --add-default-preds-as-features \
+  --log-level debug
 ```
 
+````
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+````
 
 ## Details
 

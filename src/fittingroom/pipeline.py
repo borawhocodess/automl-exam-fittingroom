@@ -21,6 +21,11 @@ def select_portfolio(
     """
     portfolio_to_choose = {k: v for k, v in portfolio.items() if v is not None}
     print(f"Available models: {list(portfolio_to_choose.keys())}")
+
+    # hack = list(portfolio_to_choose.keys())
+
+    # return hack
+
     chosen = set(portfolio_to_choose)
     n = meta_features.get("n_instances", 0)
     pct_m = meta_features.get("pct_missing", 0.0)
@@ -134,7 +139,10 @@ def build_pipeline(model_name: str, X: pd.DataFrame, params: dict = None) -> Pip
     )
 
     model_cls = MODEL_PORTFOLIO[model_name]
-    estimator = model_cls(**(params or {}))
+    # Always include model-specific static defaults (e.g. LightGBM verbosity)
+    static_params = SEARCH_SPACES.get(model_name, {}).get("__static__", {})
+    combined_params = {**static_params, **(params or {})}
+    estimator = model_cls(**combined_params)
 
     pipeline = Pipeline(
         steps=[
@@ -165,7 +173,7 @@ def fit_model(
         pipe.fit(X, y)
         logger.info(f"fitted model without HPO: {model_name}")
         return pipe
-    
+
     if model_name in ["tabm", "realmlp"]:
         return hpo_search(
             model_cls, model_name, X, y, search_space, hpo_method, seed

@@ -9,7 +9,7 @@ from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
 from fittingroom.meta_learning import extract_meta_features
-from fittingroom.pipeline import aggregate_predictions, fit_model, select_portfolio
+from fittingroom.pipeline import aggregate_predictions, build_pipeline, fit_model, select_portfolio
 from fittingroom.utils import get_default_constant
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ class FittingRoom:
         seed: Optional[int] = None,
         ask_expert_opinion: bool = False,
         hpo_method: str = "random",
+        add_default_preds_as_features: bool = False,
     ) -> None:
         self.seed = seed if seed is not None else get_default_constant("SEED")
         self._test_size = get_default_constant("TEST_SIZE")
@@ -33,6 +34,61 @@ class FittingRoom:
         self._models: list = []
         self.ask_expert_opinion = ask_expert_opinion
         self.hpo_method = hpo_method
+        self.add_default_preds_as_features = add_default_preds_as_features
+        self._models_for_default_preds_as_features: dict = {}
+
+    def _add_default_preds_as_features(
+        self,
+        X_train,
+        y_train,
+        X_val,
+        portfolio,
+    ):
+        """
+        novelty oder was
+        """
+        for model_name in portfolio:
+            col_name = f"pred_{model_name}"
+
+            try:
+                pipe = build_pipeline(model_name, X_train)
+            except Exception as e:
+                logger.warning(
+                    f"could not pipe : {model_name} - {e}"
+                )
+                continue
+
+            try:
+                pipe.fit(X_train, y_train)
+            except Exception as e:
+                logger.warning(
+                    f"skipping {model_name} - {e}"
+                )
+                continue
+
+            self._models_for_default_preds_as_features[model_name] = pipe
+
+            train_preds = pipe.predict(X_train)
+            val_preds = pipe.predict(X_val)
+
+            if col_name in X_train.columns:
+                logger.warning(
+                    f"overwriting column {col_name}"
+                )
+
+            X_train[col_name] = train_preds
+            X_val[col_name] = val_preds
+
+            logger.debug(
+                f"added: {col_name}"
+            )
+
+        logger.info(
+            f"added default predictions as features: {list(self._models_for_default_preds_as_features.keys())}"
+        )
+
+        return X_train, X_val
+
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> FittingRoom:
         """
@@ -50,6 +106,15 @@ class FittingRoom:
         portfolio = select_portfolio(
             meta_features, ask_expert_opinion=self.ask_expert_opinion
         )
+
+        if self.add_default_preds_as_features:
+            X_train, X_val = self._add_default_preds_as_features(
+                X_train,
+                y_train,
+                X_val,
+                portfolio,
+            )
+
 
         # fit each model and catch training failures gracefully
         trained_models = []
@@ -71,13 +136,18 @@ class FittingRoom:
 
         self._models = trained_models
 
-        # get validation predictions from all models
-        val_preds_list = [model.predict(X_val) for model in self._models]
+        val_preds_list = [m.predict(X_val) for m in self._models]
+
+        for name, preds in zip(portfolio, val_preds_list):
+            model_r2 = r2_score(y_val, preds)
+
+            logger.info(f"validation r2 for {name}: {model_r2:.{self._precision}f}")
+
         val_preds = aggregate_predictions(val_preds_list)
 
-        # calculate validation R²
         val_r2 = r2_score(y_val, val_preds)
-        logger.info(f"Validation R²: {val_r2:.{self._precision}f}")
+
+        logging.getLogger(__name__).info(f"validation r2 after aggregation: {val_r2:.{self._precision}f}")
 
         return self
 
@@ -89,5 +159,19 @@ class FittingRoom:
         if not self._models:
             raise ValueError(".fit() must be called before .predict()")
 
-        preds = [model.predict(X) for model in self._models]
-        return aggregate_predictions(preds)
+        if self.add_default_preds_as_features:
+            for model_name, pipe in self._models_for_default_preds_as_features.items():
+                col_name = f"pred_{model_name}"
+                if col_name in X.columns:
+                    logger.warning(
+                        f"overwriting column {col_name}"
+                    )
+                X[col_name] = pipe.predict(X)
+
+        # print(X.head())
+
+        test_preds_list = [model.predict(X) for model in self._models]
+
+        aggregated_preds = aggregate_predictions(test_preds_list)
+
+        return aggregated_preds
