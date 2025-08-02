@@ -8,6 +8,7 @@ import pandas as pd
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
+from fittingroom.bo_tabpfn import run_bo_tabpfn
 from fittingroom.meta_learning import extract_meta_features
 from fittingroom.pipeline import aggregate_predictions, build_pipeline, fit_model, select_portfolio
 from fittingroom.utils import get_default_constant
@@ -27,6 +28,7 @@ class FittingRoom:
         ask_expert_opinion: bool = False,
         hpo_method: str = "random",
         add_default_preds_as_features: bool = False,
+        use_bo_tabpfn_surrogate: bool = False,
     ) -> None:
         self.seed = seed if seed is not None else get_default_constant("SEED")
         self._test_size = get_default_constant("TEST_SIZE")
@@ -36,6 +38,8 @@ class FittingRoom:
         self.hpo_method = hpo_method
         self.add_default_preds_as_features = add_default_preds_as_features
         self._models_for_default_preds_as_features: dict = {}
+        self._bo_tabpfn_fitted_model = None
+        self.use_bo_tabpfn_surrogate = use_bo_tabpfn_surrogate
 
     def _add_default_preds_as_features(
         self,
@@ -147,7 +151,22 @@ class FittingRoom:
 
         val_r2 = r2_score(y_val, val_preds)
 
-        logging.getLogger(__name__).info(f"validation r2 after aggregation: {val_r2:.{self._precision}f}")
+        logger.info(f"validation r2 after aggregation: {val_r2:.{self._precision}f}")
+
+
+        # TODO: sbo post
+
+        if self.use_bo_tabpfn_surrogate:
+            logger.info("Using BO with TabPFN surrogate")
+
+            # Run the Bayesian Optimization with TabPFN surrogate
+            bo_tabpfn_trained_model = run_bo_tabpfn(
+                X_train,
+                y_train,
+                X_val,
+                y_val,
+            )
+            self._bo_tabpfn_fitted_model = bo_tabpfn_trained_model
 
         return self
 
@@ -169,9 +188,11 @@ class FittingRoom:
                 X[col_name] = pipe.predict(X)
 
         # print(X.head())
+        
+        if self.use_bo_tabpfn_surrogate:
+            preds = self._bo_tabpfn_fitted_model.predict(X)
+        else:
+            test_preds_list = [model.predict(X) for model in self._models]
+            preds = aggregate_predictions(test_preds_list)
 
-        test_preds_list = [model.predict(X) for model in self._models]
-
-        aggregated_preds = aggregate_predictions(test_preds_list)
-
-        return aggregated_preds
+        return preds

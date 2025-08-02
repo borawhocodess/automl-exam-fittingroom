@@ -33,6 +33,7 @@ def main(
     ask_expert_opinion: bool,
     hpo_method: str,
     add_default_preds_as_features: bool,
+    use_bo_tabpfn_surrogate: bool,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
@@ -40,7 +41,8 @@ def main(
         seed=seed,
         ask_expert_opinion=ask_expert_opinion,
         hpo_method=hpo_method,
-        add_default_preds_as_features=add_default_preds_as_features
+        add_default_preds_as_features=add_default_preds_as_features,
+        use_bo_tabpfn_surrogate=use_bo_tabpfn_surrogate,
     )
 
     (fittingroom, fit_duration, _) = run_and_time(
@@ -167,6 +169,11 @@ if __name__ == "__main__":
         "--add-default-preds-as-features",
         action="store_true",
     )
+    parser.add_argument(
+        "--use-bo-tabpfn-surrogate",
+        action="store_true",
+        help="Whether to use Bayesian Optimization with TabPFN as surrogate model.",
+    )
 
     args = parser.parse_args()
     level = getattr(logging, args.log_level.upper())
@@ -186,6 +193,7 @@ if __name__ == "__main__":
         ask_expert_opinion=args.ask_expert_opinion,
         hpo_method=args.hpo_method,
         add_default_preds_as_features=args.add_default_preds_as_features,
+        use_bo_tabpfn_surrogate=args.use_bo_tabpfn_surrogate,
     )
 
     pxp("left thefittingroom")

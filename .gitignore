@@ -4,6 +4,8 @@
 *.egg-info
 __pycache__
 
+*.zip
+
 uv.lock
 
 /metadata

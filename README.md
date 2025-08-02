@@ -27,6 +27,7 @@ python run.py \
   --output-path preds/bike_sharing_demand/output.npy \
   --hpo-method hyperband \
   --add-default-preds-as-features \
+  --use-bo-tabpfn-surrogate \
   --log-level debug
 ```
 
