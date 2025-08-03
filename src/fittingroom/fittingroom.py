@@ -29,6 +29,7 @@ class FittingRoom:
         hpo_method: str = "random",
         add_default_preds_as_features: bool = False,
         add_post_hpo_preds_as_features: bool = False,
+        use_secondary_hpo: bool = False,
         use_bo_tabpfn_surrogate: bool = False,
     ) -> None:
         self.seed = seed if seed is not None else get_default_constant("SEED")
@@ -43,6 +44,7 @@ class FittingRoom:
         self._models_for_post_hpo_preds_as_features: dict = {}
         self._bo_tabpfn_fitted_model = None
         self.use_bo_tabpfn_surrogate = use_bo_tabpfn_surrogate
+        self.use_secondary_hpo = use_secondary_hpo
 
     def _add_default_preds_as_features(
         self,
@@ -213,7 +215,8 @@ class FittingRoom:
                 y_val,
             )
             self._bo_tabpfn_fitted_model = bo_tabpfn_trained_model
-        else:
+
+        elif self.use_secondary_hpo and self.add_post_hpo_preds_as_features:
             retrained_models = []
             for model_name in portfolio:
                 try:

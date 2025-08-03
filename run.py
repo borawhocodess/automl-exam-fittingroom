@@ -34,6 +34,7 @@ def main(
     hpo_method: str,
     add_default_preds_as_features: bool,
     add_post_hpo_preds_as_features: bool,
+    use_secondary_hpo: bool,
     use_bo_tabpfn_surrogate: bool,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
@@ -44,6 +45,7 @@ def main(
         hpo_method=hpo_method,
         add_default_preds_as_features=add_default_preds_as_features,
         add_post_hpo_preds_as_features=add_post_hpo_preds_as_features,
+        use_secondary_hpo=use_secondary_hpo,
         use_bo_tabpfn_surrogate=use_bo_tabpfn_surrogate,
     )
 
@@ -183,6 +185,10 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
+        "--use-secondary-hpo",
+        action="store_true",
+    )
+    parser.add_argument(
         "--use-bo-tabpfn-surrogate",
         action="store_true",
         help="Whether to use Bayesian Optimization with TabPFN as surrogate model.",
@@ -207,6 +213,7 @@ if __name__ == "__main__":
         hpo_method=args.hpo_method,
         add_default_preds_as_features=args.add_default_preds_as_features,
         add_post_hpo_preds_as_features=args.add_post_hpo_preds_as_features,
+        use_secondary_hpo=args.use_secondary_hpo,
         use_bo_tabpfn_surrogate=args.use_bo_tabpfn_surrogate,
     )
 
