@@ -28,6 +28,7 @@ class FittingRoom:
         ask_expert_opinion: bool = False,
         hpo_method: str = "random",
         add_default_preds_as_features: bool = False,
+        add_post_hpo_preds_as_features: bool = False,
         use_bo_tabpfn_surrogate: bool = False,
     ) -> None:
         self.seed = seed if seed is not None else get_default_constant("SEED")
@@ -37,7 +38,9 @@ class FittingRoom:
         self.ask_expert_opinion = ask_expert_opinion
         self.hpo_method = hpo_method
         self.add_default_preds_as_features = add_default_preds_as_features
+        self.add_post_hpo_preds_as_features = add_post_hpo_preds_as_features
         self._models_for_default_preds_as_features: dict = {}
+        self._models_for_post_hpo_preds_as_features: dict = {}
         self._bo_tabpfn_fitted_model = None
         self.use_bo_tabpfn_surrogate = use_bo_tabpfn_surrogate
 
@@ -89,6 +92,44 @@ class FittingRoom:
 
         logger.info(
             f"added default predictions as features: {list(self._models_for_default_preds_as_features.keys())}"
+        )
+
+        return X_train, X_val
+
+    def _add_post_hpo_preds_as_features(
+        self,
+        X_train,
+        X_val,
+        trained_models,
+        portfolio,
+    ):
+        """
+        novelty oder was
+        """
+
+        for model_name, model in zip(portfolio, trained_models):
+            col_name = f"pred_post_hpo_{model_name}"
+
+            try:
+                train_preds = model.predict(X_train)
+                val_preds = model.predict(X_val)
+            except Exception as e:
+                logger.warning(
+                    f"..."
+                )
+                continue
+
+            if col_name in X_train.columns:
+                logger.warning(
+                    f"overwriting column {col_name}"
+                )
+
+            X_train[col_name] = train_preds
+            X_val[col_name] = val_preds
+            self._models_for_post_hpo_preds_as_features[model_name] = model
+
+        logger.info(
+            f"added post-HPO predictions as features: {list(self._models_for_post_hpo_preds_as_features.keys())}"
         )
 
         return X_train, X_val
@@ -153,8 +194,13 @@ class FittingRoom:
 
         logger.info(f"validation r2 after aggregation: {val_r2:.{self._precision}f}")
 
-
-        # TODO: sbo post
+        if self.add_post_hpo_preds_as_features:
+            X_train, X_val = self._add_post_hpo_preds_as_features(
+                X_train,
+                X_val,
+                trained_models,
+                portfolio,
+            )
 
         if self.use_bo_tabpfn_surrogate:
             logger.info("Using BO with TabPFN surrogate")
@@ -167,6 +213,39 @@ class FittingRoom:
                 y_val,
             )
             self._bo_tabpfn_fitted_model = bo_tabpfn_trained_model
+        else:
+            retrained_models = []
+            for model_name in portfolio:
+                try:
+                    model = fit_model(
+                        model_name,
+                        X_train,
+                        y_train,
+                        hpo_method=self.hpo_method,
+                        seed=self.seed,
+                    )
+                    retrained_models.append(model)
+                except Exception as e:
+                    logger.warning(f"Skipping model '{model_name}' due to error: {e}")
+
+            if retrained_models:
+                self._models = retrained_models
+                trained_models = retrained_models
+            else:
+                logger.warning("No models were successfully retrained after HPO.")
+
+            try:
+                val_preds_list = [m.predict(X_val) for m in self._models]
+                for name, preds in zip(portfolio, val_preds_list):
+                    model_r2 = r2_score(y_val, preds)
+                    logger.info(f"validation r2 for {name} after post-HPO: {model_r2:.{self._precision}f}")
+                val_preds = aggregate_predictions(val_preds_list)
+                val_r2 = r2_score(y_val, val_preds)
+                logger.info(
+                    f"validation r2 after post-HPO aggregation: {val_r2:.{self._precision}f}"
+                )
+            except Exception as e:
+                logger.warning(f"...: {e}")
 
         return self
 
@@ -187,8 +266,22 @@ class FittingRoom:
                     )
                 X[col_name] = pipe.predict(X)
 
+        if self.add_post_hpo_preds_as_features:
+            for model_name, model in self._models_for_post_hpo_preds_as_features.items():
+                col_name = f"pred_post_hpo_{model_name}"
+                if col_name in X.columns:
+                    logger.warning(
+                        f"overwriting column {col_name}"
+                    )
+                try:
+                    X[col_name] = model.predict(X)
+                except Exception as e:
+                    logger.warning(
+                        f"... {model_name} - {e}"
+                    )
+
         # print(X.head())
-        
+
         if self.use_bo_tabpfn_surrogate:
             preds = self._bo_tabpfn_fitted_model.predict(X)
         else:

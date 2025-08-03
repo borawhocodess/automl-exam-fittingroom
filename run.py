@@ -33,6 +33,7 @@ def main(
     ask_expert_opinion: bool,
     hpo_method: str,
     add_default_preds_as_features: bool,
+    add_post_hpo_preds_as_features: bool,
     use_bo_tabpfn_surrogate: bool,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
@@ -42,6 +43,7 @@ def main(
         ask_expert_opinion=ask_expert_opinion,
         hpo_method=hpo_method,
         add_default_preds_as_features=add_default_preds_as_features,
+        add_post_hpo_preds_as_features=add_post_hpo_preds_as_features,
         use_bo_tabpfn_surrogate=use_bo_tabpfn_surrogate,
     )
 
@@ -85,9 +87,16 @@ def main(
 
     metadata_entry = {
         "timestamp": timestamp,
+
         "seed": seed,
         "task": task,
         "fold": fold,
+        "ask_expert_opinion": ask_expert_opinion,
+        "hpo_method": hpo_method,
+        "add_default_preds_as_features": add_default_preds_as_features,
+        "add_post_hpo_preds_as_features": add_post_hpo_preds_as_features,
+        "use_bo_tabpfn_surrogate": use_bo_tabpfn_surrogate,
+
         "r2_test": r2_test if dataset.y_test is not None else None,
         "output_path": str(output_path),
         "fit_duration": fit_duration,
@@ -170,6 +179,10 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
+        "--add-post-hpo-preds-as-features",
+        action="store_true",
+    )
+    parser.add_argument(
         "--use-bo-tabpfn-surrogate",
         action="store_true",
         help="Whether to use Bayesian Optimization with TabPFN as surrogate model.",
@@ -193,6 +206,7 @@ if __name__ == "__main__":
         ask_expert_opinion=args.ask_expert_opinion,
         hpo_method=args.hpo_method,
         add_default_preds_as_features=args.add_default_preds_as_features,
+        add_post_hpo_preds_as_features=args.add_post_hpo_preds_as_features,
         use_bo_tabpfn_surrogate=args.use_bo_tabpfn_surrogate,
     )
 
