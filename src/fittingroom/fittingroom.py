@@ -38,6 +38,7 @@ class FittingRoom:
         self._test_size = get_default_constant("TEST_SIZE")
         self._precision = get_default_constant("PRECISION")
         self._models: list = []
+        self._val_scores: list = []
         self.ask_expert_opinion = ask_expert_opinion
         self.hpo_method = hpo_method
         self.add_default_preds_as_features = add_default_preds_as_features
@@ -241,12 +242,16 @@ class FittingRoom:
 
         val_preds_list = [m.predict(X_val) for m in self._models]
 
+        val_scores = []
+
         for name, preds in zip(portfolio, val_preds_list):
             model_r2 = r2_score(y_val, preds)
-
+            val_scores.append(model_r2)
             logger.info(f"validation r2 for {name}: {model_r2:.{self._precision}f}")
 
-        val_preds = aggregate_predictions(val_preds_list)
+        self._val_scores = val_scores
+
+        val_preds = aggregate_predictions(val_preds_list, weights=val_scores)
 
         val_r2 = r2_score(y_val, val_preds)
 
@@ -326,10 +331,13 @@ class FittingRoom:
         if self.add_post_hpo_preds_as_features or self.use_bo_tabpfn_surrogate:
             try:
                 val_preds_list = [m.predict(X_val) for m in self._models]
+                val_scores = []
                 for name, preds in zip(portfolio, val_preds_list):
                     model_r2 = r2_score(y_val, preds)
+                    val_scores.append(model_r2)
                     logger.info(f"validation r2 for {name} after post-HPO: {model_r2:.{self._precision}f}")
-                val_preds = aggregate_predictions(val_preds_list)
+                self._val_scores = val_scores
+                val_preds = aggregate_predictions(val_preds_list, weights=val_scores)
                 val_r2 = r2_score(y_val, val_preds)
                 logger.info(
                     f"validation r2 after post-HPO aggregation: {val_r2:.{self._precision}f}"
@@ -384,6 +392,6 @@ class FittingRoom:
             preds = self._bo_tabpfn_fitted_model.predict(X)
         else:
             test_preds_list = [model.predict(X) for model in self._models]
-            preds = aggregate_predictions(test_preds_list)
+            preds = aggregate_predictions(test_preds_list, weights=getattr(self, "_val_scores", None))
 
         return preds

@@ -197,8 +197,29 @@ def fit_model(
     return pipeline
 
 
-def aggregate_predictions(preds_list):
-    aggregated_predictions = np.mean(preds_list, axis=0)
+def aggregate_predictions(preds_list, weights=None) -> pd.Series:
+    """
+    weighted mean
+    """
+
+    preds_arr = np.vstack(preds_list)
+
+    if weights is None:
+        return preds_arr.mean(axis=0)
+
+    weights = np.asarray(weights, dtype=float)
+
+    if weights.ndim != 1 or len(weights) != len(preds_list):
+        raise ValueError("...")
+
+    weights = np.maximum(weights, 0)
+
+    if weights.sum() == 0:
+        weights = np.ones_like(weights)
+
+    weights = weights / weights.sum()
+
+    aggregated_predictions = np.average(preds_arr, axis=0, weights=weights)
 
     logger.debug(f"aggregated predictions: {aggregated_predictions.shape}")
 
