@@ -8,6 +8,7 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.metrics import r2_score
 from sklearn.model_selection import KFold, train_test_split
+from sklearn.pipeline import Pipeline
 
 from fittingroom.bo_tabpfn import run_bo_tabpfn
 from fittingroom.meta_learning import extract_meta_features
@@ -63,8 +64,14 @@ class FittingRoom:
             random_state=self.seed,
         )
 
+        X_base = X_train.copy(deep=True)
+
+        pending = {}
+
         for model_name in portfolio:
             col_name = f"pred_{model_name}"
+
+            bag_models = []
 
             try:
                 base_pipe = build_pipeline(model_name, X_train)
@@ -74,33 +81,35 @@ class FittingRoom:
                 )
                 continue
 
-            oof_preds = np.zeros(len(X_train))
+            oof_preds = np.zeros(len(X_base))
 
-            for train_idx, val_idx in kf.split(X_train):
-                X_train_fold, y_train_fold = X_train.iloc[train_idx], y_train.iloc[train_idx]
-                X_val_fold = X_train.iloc[val_idx]
+            for train_idx, val_idx in kf.split(X_base):
+                X_train_fold, y_train_fold = X_base.iloc[train_idx], y_train.iloc[train_idx]
+                X_val_fold = X_base.iloc[val_idx]
 
                 pipe_fold = clone(base_pipe)
                 pipe_fold.fit(X_train_fold, y_train_fold)
+                bag_models.append(pipe_fold)
                 oof_preds[val_idx] = pipe_fold.predict(X_val_fold)
 
-            full_pipe = clone(base_pipe)
-            full_pipe.fit(X_train, y_train)
-            self._models_for_default_preds_as_features[model_name] = full_pipe
+            self._models_for_default_preds_as_features[model_name] = bag_models
 
-            val_preds = full_pipe.predict(X_val)
+            val_preds = np.mean([m.predict(X_val) for m in bag_models], axis=0)
 
             if col_name in X_train.columns:
                 logger.warning(
                     f"overwriting column {col_name}"
                 )
 
-            X_train[col_name] = oof_preds
-            X_val[col_name] = val_preds
+            pending[col_name] = (oof_preds, val_preds, bag_models)
 
             logger.debug(
-                f"added OOF: {col_name}"
+                f"calculated OOF: {col_name}"
             )
+
+        for col_name, (oof_preds, val_preds, bag_models) in pending.items():
+            X_train[col_name] = oof_preds
+            X_val[col_name] = val_preds
 
         logger.info(
             f"added default OOF predictions as features: {list(self._models_for_default_preds_as_features.keys())}"
@@ -125,8 +134,14 @@ class FittingRoom:
             random_state=self.seed,
         )
 
+        X_base = X_train.copy(deep=True)
+
+        pending = {}
+
         for model_name, model in zip(portfolio, trained_models):
             col_name = f"pred_post_hpo_{model_name}"
+
+            bag_models = []
 
             params = getattr(model, "_hpo_params", {})
 
@@ -141,27 +156,33 @@ class FittingRoom:
                 )
                 continue
 
-            oof_preds = np.zeros(len(X_train))
+            oof_preds = np.zeros(len(X_base))
 
-            for train_idx, val_idx in kf.split(X_train):
-                X_train_fold, y_train_fold = X_train.iloc[train_idx], y_train.iloc[train_idx]
-                X_val_fold = X_train.iloc[val_idx]
+            for train_idx, val_idx in kf.split(X_base):
+                X_train_fold, y_train_fold = X_base.iloc[train_idx], y_train.iloc[train_idx]
+                X_val_fold = X_base.iloc[val_idx]
 
                 pipe_fold = clone(base_pipe)
                 pipe_fold.fit(X_train_fold, y_train_fold)
+                bag_models.append(pipe_fold)
                 oof_preds[val_idx] = pipe_fold.predict(X_val_fold)
 
-            full_pipe = clone(base_pipe)
-            full_pipe.fit(X_train, y_train)
-            self._models_for_post_hpo_preds_as_features[model_name] = full_pipe
+            self._models_for_post_hpo_preds_as_features[model_name] = bag_models
 
-            val_preds = full_pipe.predict(X_val)
+            val_preds = np.mean([m.predict(X_val) for m in bag_models], axis=0)
 
             if col_name in X_train.columns:
                 logger.warning(
                     f"overwriting column {col_name}"
                 )
 
+            pending[col_name] = (oof_preds, val_preds, bag_models)
+
+            logger.debug(
+                f"calculated post-HPO OOF: {col_name}"
+            )
+
+        for col_name, (oof_preds, val_preds, bag_models) in pending.items():
             X_train[col_name] = oof_preds
             X_val[col_name] = val_preds
 
@@ -326,6 +347,8 @@ class FittingRoom:
         if not self._models:
             raise ValueError(".fit() must be called before .predict()")
 
+        X = X.copy(deep=True)
+
         if self.add_default_preds_as_features:
             for model_name, pipe in self._models_for_default_preds_as_features.items():
                 col_name = f"pred_{model_name}"
@@ -333,7 +356,10 @@ class FittingRoom:
                     logger.warning(
                         f"overwriting column {col_name}"
                     )
-                X[col_name] = pipe.predict(X)
+                if isinstance(pipe, list):
+                    X[col_name] = np.mean([m.predict(X) for m in pipe], axis=0)
+                else:
+                    X[col_name] = pipe.predict(X)
 
         if self.add_post_hpo_preds_as_features:
             for model_name, model in self._models_for_post_hpo_preds_as_features.items():
@@ -343,7 +369,10 @@ class FittingRoom:
                         f"overwriting column {col_name}"
                     )
                 try:
-                    X[col_name] = model.predict(X)
+                    if isinstance(model, list):
+                        X[col_name] = np.mean([m.predict(X) for m in model], axis=0)
+                    else:
+                        X[col_name] = model.predict(X)
                 except Exception as e:
                     logger.warning(
                         f"... {model_name} - {e}"
