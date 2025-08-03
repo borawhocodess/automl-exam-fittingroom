@@ -193,6 +193,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Whether to use Bayesian Optimization with TabPFN as surrogate model.",
     )
+    # TODO: --aggregate-greedy
 
     args = parser.parse_args()
     level = getattr(logging, args.log_level.upper())
