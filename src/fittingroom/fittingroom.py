@@ -5,6 +5,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
@@ -237,6 +238,36 @@ class FittingRoom:
             else:
                 logger.warning("No models were successfully retrained after HPO.")
 
+        elif self.add_post_hpo_preds_as_features:
+            retrained_models = []
+            for model_name, first_model in zip(portfolio, trained_models):
+                try:
+                    params = getattr(first_model, "_hpo_params", {})
+
+                    if not params and not isinstance(first_model, Pipeline):
+                        cloned = clone(first_model)
+                        cloned.fit(X_train, y_train)
+                        retrained_models.append(cloned)
+                        continue
+
+                    new_pipeline = build_pipeline(
+                        model_name,
+                        X_train,
+                        params=params,
+                    )
+                    new_pipeline.fit(X_train, y_train)
+                    new_pipeline._hpo_params = params
+                    retrained_models.append(new_pipeline)
+                except Exception as e:
+                    logger.warning(f"Skipping model '{model_name}' due to error: {e}")
+
+            if retrained_models:
+                self._models = retrained_models
+                trained_models = retrained_models
+            else:
+                logger.warning("No models retrained in post-HPO phase; keeping first-pass models.")
+
+        if self.add_post_hpo_preds_as_features or self.use_bo_tabpfn_surrogate:
             try:
                 val_preds_list = [m.predict(X_val) for m in self._models]
                 for name, preds in zip(portfolio, val_preds_list):

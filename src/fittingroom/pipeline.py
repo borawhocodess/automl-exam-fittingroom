@@ -193,6 +193,7 @@ def fit_model(
     logger.debug(f"best params found from hpo search: {params}")
     pipeline = build_pipeline(model_name, X, params)
     pipeline.fit(X, y)
+    pipeline._hpo_params = params
     return pipeline
 
 
