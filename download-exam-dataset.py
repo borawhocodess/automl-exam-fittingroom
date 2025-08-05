@@ -1,7 +1,8 @@
-import os
-import requests
-import zipfile
 import io
+import os
+import zipfile
+
+import requests
 
 
 def download_and_unzip(url, extract_to):

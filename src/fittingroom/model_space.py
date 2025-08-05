@@ -1,11 +1,11 @@
 from catboost import CatBoostRegressor
 from lightgbm import LGBMRegressor
-from xgboost import XGBRegressor
+from pytabkit import RealMLP_HPO_Regressor, RealMLP_TD_Regressor
+from pytabkit import TabM_HPO_Regressor, TabM_D_Regressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from tabpfn import TabPFNRegressor
-from pytabkit import TabM_HPO_Regressor, TabM_D_Regressor
-from pytabkit import RealMLP_HPO_Regressor, RealMLP_TD_Regressor
+from xgboost import XGBRegressor
 
 MODEL_PORTFOLIO = {
     # "lr": LinearRegression,

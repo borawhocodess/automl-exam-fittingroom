@@ -1,16 +1,15 @@
 import logging
 from typing import Callable
-from sklearn.base import BaseEstimator
-from sklearn.preprocessing import StandardScaler
-from scipy.optimize import minimize
-from catboost import CatBoostRegressor
-from tabpfn import TabPFNRegressor
-from scipy.stats import norm
 
-from sklearn.metrics import r2_score
 import numpy as np
 import pandas as pd
-
+from catboost import CatBoostRegressor
+from scipy.optimize import minimize
+from scipy.stats import norm
+from sklearn.base import BaseEstimator
+from sklearn.metrics import r2_score
+from sklearn.preprocessing import StandardScaler
+from tabpfn import TabPFNRegressor
 
 logger = logging.getLogger(__name__)
 

@@ -5,13 +5,13 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import optuna
 import pandas as pd
+from pytabkit import RealMLP_HPO_Regressor, TabM_HPO_Regressor
 from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
 from fittingroom.model_space import FIDELITY_MAP
 from fittingroom.utils import get_default_constant
-from pytabkit import RealMLP_HPO_Regressor, TabM_HPO_Regressor
 
 logger = logging.getLogger(__name__)
 
