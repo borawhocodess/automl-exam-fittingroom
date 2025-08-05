@@ -80,8 +80,8 @@ def parse_args():
     )
     p.add_argument(
         "--seeds",
-        default="0,1,2",
-        help="Comma-separated seeds list (default: 0,1,2)",
+        default="42,420,11",
+        help="Comma-separated seeds list (default: 42,420,11)",
     )
     p.add_argument(
         "--fold",
