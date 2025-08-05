@@ -169,6 +169,7 @@ def main() -> None:
         "started": datetime.now().astimezone().isoformat(timespec="seconds"),
         "ended": None,
         "total_runtime_s": None,
+        "completed": False,
     }
 
     exp_meta[experiment_id] = exp_record
@@ -240,6 +241,7 @@ def main() -> None:
     end_wall = datetime.now()
     exp_record["ended"] = end_wall.astimezone().isoformat(timespec="seconds")
     exp_record["total_runtime_s"] = (end_wall - start_wall).total_seconds()
+    exp_record["completed"] = True
 
     exp_meta[experiment_id] = exp_record
     with EXP_METADATA.open("w") as f:
