@@ -60,10 +60,10 @@ PRESETS = {
 TASKS = [
     "bike_sharing_demand",
     "brazilian_houses",
-    # "superconductivity",
-    # "wine_quality",
-    # "yprop_4_1",
-    # "exam_dataset",
+    "superconductivity",
+    "wine_quality",
+    "yprop_4_1",
+    "exam_dataset",
 ]
 
 
@@ -130,7 +130,6 @@ def latest_record(task: str, seed: int, fold: int) -> dict | None:
     with FIT_METADATA.open() as f:
         meta = json.load(f)
 
-    # entries are keyed by timestamp string; take the newest that matches
     matches = [
         rec
         for rec in meta.values()
@@ -149,6 +148,35 @@ def main() -> None:
         log.error(f"Unknown preset '{args.name}'. Available: {', '.join(PRESETS)}")
         raise SystemExit(1)
 
+    METADIR.mkdir(parents=True, exist_ok=True)
+    if EXP_METADATA.exists():
+        with EXP_METADATA.open() as f:
+            exp_meta = json.load(f)
+    else:
+        exp_meta = {}
+
+    timestamp = get_timestamp()
+    experiment_id = f"{timestamp}_{args.name}"
+
+    exp_record = {
+        "timestamp": timestamp,
+        "preset": args.name,
+        "extra_flags": PRESETS[args.name],
+        "seeds": [int(s) for s in args.seeds.split(",") if s.strip()],
+        "fold": args.fold,
+        "tasks": {},
+        "macro_avg_r2": None,
+        "started": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "ended": None,
+        "total_runtime_s": None,
+    }
+
+    exp_meta[experiment_id] = exp_record
+    with EXP_METADATA.open("w") as f:
+        json.dump(exp_meta, f, indent=2)
+
+    log.info("Created experiment skeleton: key=%s", experiment_id)
+
     seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
     preset_flags = PRESETS[args.name]
 
@@ -164,7 +192,7 @@ def main() -> None:
     for task in TASKS:
         for seed in seeds:
             cmd = build_cmd(task, seed, args.fold, preset_flags)
-            log.info(f"▶ running {task}  seed={seed}")
+            log.info(f"- running {task}  seed={seed}")
             log.debug("Full cmd: %s", shlex.join(cmd))
 
             res = subprocess.run(cmd, cwd=ROOT)  # inherit stdout/stderr
@@ -180,77 +208,44 @@ def main() -> None:
                 if r2 is not None:
                     per_task_scores[task].append(r2)
                     per_task_runs[task][rec["timestamp"]] = r2
-                    log.info("  ↳ r2_test = %.4f (ts = %s)", r2, rec["timestamp"])
+                    log.info("  - r2_test = %.4f (ts = %s)", r2, rec["timestamp"])
                 else:
-                    log.info("  ↳ r2_test missing (e.g. exam dataset)")
+                    log.info("  - r2_test missing (e.g. exam dataset)")
 
-    end_wall = datetime.now()
-    duration_s = (end_wall - start_wall).total_seconds()
-
-    log.info("all runs finished in: %.1f s", duration_s)
-
-    log.info("aggregating results…")
-
-    agg = {}
-
-    for task, scores in per_task_scores.items():
-        if scores:
-            m = mean(scores)
-            s = stdev(scores) if len(scores) > 1 else 0.0
-            agg[task] = {
+        if per_task_scores[task]:
+            m = mean(per_task_scores[task])
+            s = stdev(per_task_scores[task]) if len(per_task_scores[task]) > 1 else 0.0
+            exp_record["tasks"][task] = {
                 "mean": m,
                 "std": s,
-                "n": len(scores),
+                "n": len(per_task_scores[task]),
                 "run_ids": per_task_runs[task],
             }
-            log.info("  %s : %.4f ± %.4f  (n=%d)", task, m, s, len(scores))
-        else:
-            log.info("  %s : no numeric scores collected", task)
 
-    numeric_means = [v["mean"] for v in agg.values() if v]
-    macro_avg = mean(numeric_means) if numeric_means else None
-    log.info(
-        "Macro-average r2 across tasks = %s",
-        f"{macro_avg:.4f}" if macro_avg is not None else "N/A",
-    )
+            done_means = [v["mean"] for v in exp_record["tasks"].values()]
+            exp_record["macro_avg_r2"] = mean(done_means)
 
-    log.info("Step 4 complete — metrics aggregated.")
+            exp_meta[experiment_id] = exp_record
+            with EXP_METADATA.open("w") as f:
+                json.dump(exp_meta, f, indent=2)
+
+            log.info(
+                "Incrementally saved %s  (macro r2 so far = %.4f)",
+                task,
+                exp_record["macro_avg_r2"],
+            )
+
+    log.info("all runs finished - finalising record...")
 
     end_wall = datetime.now()
-    runtime_s = (end_wall - start_wall).total_seconds()
-
-    timestamp = get_timestamp()
-
-    experiment_id = f"{timestamp}_{args.name}"
-    exp_record = {
-        "timestamp": timestamp,
-        "preset": args.name,
-        "extra_flags": preset_flags,
-        "seeds": seeds,
-        "fold": args.fold,
-        "tasks": agg,  # per-task mean/std/n
-        "macro_avg_r2": macro_avg,
-        "started": start_wall.astimezone().isoformat(timespec="seconds"),
-        "ended": end_wall.astimezone().isoformat(timespec="seconds"),
-        "total_runtime_s": runtime_s,
-    }
-
-    # --- write to experiment_metadata.json ---
-    METADIR.mkdir(parents=True, exist_ok=True)
-    if EXP_METADATA.exists():
-        with EXP_METADATA.open() as f:
-            exp_meta = json.load(f)
-    else:
-        exp_meta = {}
+    exp_record["ended"] = end_wall.astimezone().isoformat(timespec="seconds")
+    exp_record["total_runtime_s"] = (end_wall - start_wall).total_seconds()
 
     exp_meta[experiment_id] = exp_record
-
     with EXP_METADATA.open("w") as f:
         json.dump(exp_meta, f, indent=2)
 
-    log.info(
-        "Step 5 complete — summary written to %s (key=%s)", EXP_METADATA, experiment_id
-    )
+    log.info("DONE — final summary written to %s (key=%s)", EXP_METADATA, experiment_id)
 
 
 if __name__ == "__main__":
