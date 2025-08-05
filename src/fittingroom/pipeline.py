@@ -23,9 +23,9 @@ def select_portfolio(
 
     logger.info(f"Available models: {list(portfolio_to_choose.keys())}")
 
-    # hack = list(portfolio_to_choose.keys())
+    hack = list(portfolio_to_choose.keys())
 
-    # return hack
+    return hack
 
     chosen = set(portfolio_to_choose)
     n = meta_features.get("n_instances", 0)
