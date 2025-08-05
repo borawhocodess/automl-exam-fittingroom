@@ -144,15 +144,6 @@ SEARCH_SPACES = {
             "condition": {"booster": "dart"},
         },
     },
-    "realmlp": {
-        'hpo_space_name': 'tabarena',
-        'verbosity': 1,
-        'n_threads': 1
-    },
-    "tabm": {
-        'hpo_space_name': 'tabarena',
-        'verbosity': 1,
-        'n_threads': 1
-    }
+    "realmlp": {"hpo_space_name": "tabarena", "verbosity": 1, "n_threads": 1},
+    "tabm": {"hpo_space_name": "tabarena", "verbosity": 1, "n_threads": 1},
 }
-

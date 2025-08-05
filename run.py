@@ -89,7 +89,6 @@ def main(
 
     metadata_entry = {
         "timestamp": timestamp,
-
         "seed": seed,
         "task": task,
         "fold": fold,
@@ -98,7 +97,6 @@ def main(
         "add_default_preds_as_features": add_default_preds_as_features,
         "add_post_hpo_preds_as_features": add_post_hpo_preds_as_features,
         "use_bo_tabpfn_surrogate": use_bo_tabpfn_surrogate,
-
         "r2_test": r2_test if dataset.y_test is not None else None,
         "output_path": str(output_path),
         "fit_duration": fit_duration,

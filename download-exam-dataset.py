@@ -3,6 +3,7 @@ import requests
 import zipfile
 import io
 
+
 def download_and_unzip(url, extract_to):
     """
     Download a zip file from the specified URL and extract its contents directly
@@ -19,10 +20,11 @@ def download_and_unzip(url, extract_to):
 
     os.makedirs(extract_to, exist_ok=True)
 
-    with zipfile.ZipFile(zip_bytes, 'r') as zip_ref:
+    with zipfile.ZipFile(zip_bytes, "r") as zip_ref:
         zip_ref.extractall(extract_to)
 
     print(f"Downloaded and extracted zip file from {url} to: {extract_to}")
+
 
 def main():
     # URL for the exam dataset zip
@@ -31,6 +33,7 @@ def main():
     extract_folder = "data"
 
     download_and_unzip(url_exam, extract_folder)
+
 
 if __name__ == "__main__":
     main()

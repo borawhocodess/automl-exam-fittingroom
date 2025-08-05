@@ -12,7 +12,12 @@ from sklearn.pipeline import Pipeline
 
 from fittingroom.bo_tabpfn import run_bo_tabpfn
 from fittingroom.meta_learning import extract_meta_features
-from fittingroom.pipeline import aggregate_predictions, build_pipeline, fit_model, select_portfolio
+from fittingroom.pipeline import (
+    aggregate_predictions,
+    build_pipeline,
+    fit_model,
+    select_portfolio,
+)
 from fittingroom.utils import get_default_constant
 
 logger = logging.getLogger(__name__)
@@ -77,15 +82,16 @@ class FittingRoom:
             try:
                 base_pipe = build_pipeline(model_name, X_train)
             except Exception as e:
-                logger.warning(
-                    f"could not pipe : {model_name} - {e}"
-                )
+                logger.warning(f"could not pipe : {model_name} - {e}")
                 continue
 
             oof_preds = np.zeros(len(X_base))
 
             for train_idx, val_idx in kf.split(X_base):
-                X_train_fold, y_train_fold = X_base.iloc[train_idx], y_train.iloc[train_idx]
+                X_train_fold, y_train_fold = (
+                    X_base.iloc[train_idx],
+                    y_train.iloc[train_idx],
+                )
                 X_val_fold = X_base.iloc[val_idx]
 
                 pipe_fold = clone(base_pipe)
@@ -98,15 +104,11 @@ class FittingRoom:
             val_preds = np.mean([m.predict(X_val) for m in bag_models], axis=0)
 
             if col_name in X_train.columns:
-                logger.warning(
-                    f"overwriting column {col_name}"
-                )
+                logger.warning(f"overwriting column {col_name}")
 
             pending[col_name] = (oof_preds, val_preds, bag_models)
 
-            logger.debug(
-                f"calculated OOF: {col_name}"
-            )
+            logger.debug(f"calculated OOF: {col_name}")
 
         for col_name, (oof_preds, val_preds, bag_models) in pending.items():
             X_train[col_name] = oof_preds
@@ -152,15 +154,16 @@ class FittingRoom:
                 else:
                     base_pipe = build_pipeline(model_name, X_train, params=params)
             except Exception as e:
-                logger.warning(
-                    f"could not pipe : {model_name} - {e}"
-                )
+                logger.warning(f"could not pipe : {model_name} - {e}")
                 continue
 
             oof_preds = np.zeros(len(X_base))
 
             for train_idx, val_idx in kf.split(X_base):
-                X_train_fold, y_train_fold = X_base.iloc[train_idx], y_train.iloc[train_idx]
+                X_train_fold, y_train_fold = (
+                    X_base.iloc[train_idx],
+                    y_train.iloc[train_idx],
+                )
                 X_val_fold = X_base.iloc[val_idx]
 
                 pipe_fold = clone(base_pipe)
@@ -173,15 +176,11 @@ class FittingRoom:
             val_preds = np.mean([m.predict(X_val) for m in bag_models], axis=0)
 
             if col_name in X_train.columns:
-                logger.warning(
-                    f"overwriting column {col_name}"
-                )
+                logger.warning(f"overwriting column {col_name}")
 
             pending[col_name] = (oof_preds, val_preds, bag_models)
 
-            logger.debug(
-                f"calculated post-HPO OOF: {col_name}"
-            )
+            logger.debug(f"calculated post-HPO OOF: {col_name}")
 
         for col_name, (oof_preds, val_preds, bag_models) in pending.items():
             X_train[col_name] = oof_preds
@@ -192,7 +191,6 @@ class FittingRoom:
         )
 
         return X_train, X_val
-
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> FittingRoom:
         """
@@ -218,7 +216,6 @@ class FittingRoom:
                 X_val,
                 portfolio,
             )
-
 
         # fit each model and catch training failures gracefully
         trained_models = []
@@ -326,7 +323,9 @@ class FittingRoom:
                 self._models = retrained_models
                 trained_models = retrained_models
             else:
-                logger.warning("No models retrained in post-HPO phase; keeping first-pass models.")
+                logger.warning(
+                    "No models retrained in post-HPO phase; keeping first-pass models."
+                )
 
         if self.add_post_hpo_preds_as_features or self.use_bo_tabpfn_surrogate:
             try:
@@ -335,7 +334,9 @@ class FittingRoom:
                 for name, preds in zip(portfolio, val_preds_list):
                     model_r2 = r2_score(y_val, preds)
                     val_scores.append(model_r2)
-                    logger.info(f"validation r2 for {name} after post-HPO: {model_r2:.{self._precision}f}")
+                    logger.info(
+                        f"validation r2 for {name} after post-HPO: {model_r2:.{self._precision}f}"
+                    )
                 self._val_scores = val_scores
                 val_preds = aggregate_predictions(val_preds_list, weights=val_scores)
                 val_r2 = r2_score(y_val, val_preds)
@@ -361,30 +362,27 @@ class FittingRoom:
             for model_name, pipe in self._models_for_default_preds_as_features.items():
                 col_name = f"pred_{model_name}"
                 if col_name in X.columns:
-                    logger.warning(
-                        f"overwriting column {col_name}"
-                    )
+                    logger.warning(f"overwriting column {col_name}")
                 if isinstance(pipe, list):
                     X[col_name] = np.mean([m.predict(X) for m in pipe], axis=0)
                 else:
                     X[col_name] = pipe.predict(X)
 
         if self.add_post_hpo_preds_as_features:
-            for model_name, model in self._models_for_post_hpo_preds_as_features.items():
+            for (
+                model_name,
+                model,
+            ) in self._models_for_post_hpo_preds_as_features.items():
                 col_name = f"pred_post_hpo_{model_name}"
                 if col_name in X.columns:
-                    logger.warning(
-                        f"overwriting column {col_name}"
-                    )
+                    logger.warning(f"overwriting column {col_name}")
                 try:
                     if isinstance(model, list):
                         X[col_name] = np.mean([m.predict(X) for m in model], axis=0)
                     else:
                         X[col_name] = model.predict(X)
                 except Exception as e:
-                    logger.warning(
-                        f"... {model_name} - {e}"
-                    )
+                    logger.warning(f"... {model_name} - {e}")
 
         # print(X.head())
 
@@ -392,6 +390,8 @@ class FittingRoom:
             preds = self._bo_tabpfn_fitted_model.predict(X)
         else:
             test_preds_list = [model.predict(X) for model in self._models]
-            preds = aggregate_predictions(test_preds_list, weights=getattr(self, "_val_scores", None))
+            preds = aggregate_predictions(
+                test_preds_list, weights=getattr(self, "_val_scores", None)
+            )
 
         return preds

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # suppress optuna logs
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
+
 def hpo_search(
     model_cls: Callable[..., BaseEstimator],
     model_name: str,
@@ -60,16 +61,17 @@ def hpo_search(
         n_trials=n_trials,
     )
 
+
 def _run_pytabkit_hpo(model_name: str, n_trials: int, X: pd.DataFrame, y: pd.Series):
     """
     Launch PyTabKit internal HPO for RealMLP or TabM.
     """
     n_trials = get_default_constant("HPO_N_TRIALS")
     params = {
-            'n_hyperopt_steps': n_trials,
-            'hpo_space_name': 'tabarena',
-            'verbosity': 1,
-            'n_threads': 1
+        "n_hyperopt_steps": n_trials,
+        "hpo_space_name": "tabarena",
+        "verbosity": 1,
+        "n_threads": 1,
     }
     logger.info(f"Running PyTabKit HPO for {model_name} with params: {params}")
 
@@ -602,4 +604,3 @@ def _estimate_saved_time(step: int, max_budget: int, elapsed: float) -> float:
     per_unit = elapsed / float(step)
     remaining = max(0, int(max_budget) - int(step))
     return max(0.0, remaining * per_unit)
-

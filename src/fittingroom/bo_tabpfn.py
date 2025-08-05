@@ -61,8 +61,10 @@ class TabPFNSurrogate:
 
     def predict(self, X, return_std=False):
         if return_std:
-            pred = self.model.predict(X, output_type="quantiles", quantiles=[0.1,0.5,0.9])
-            
+            pred = self.model.predict(
+                X, output_type="quantiles", quantiles=[0.1, 0.5, 0.9]
+            )
+
             q10, q50, q90 = pred[0], pred[1], pred[2]
             mean = q50
             std = (q90 - q10) / 2
@@ -76,7 +78,7 @@ def UCB(x: np.ndarray, model, kappa: float = 2.0) -> float:
     x = np.array(x).reshape(1, -1)
     mu, std = model.predict(x, return_std=True)
     return mu[0] + kappa * std[0]
-    
+
 
 def PI(x: np.ndarray, model, eta: float, xi: float = 0.01) -> float:
     """Probability of Improvement"""
@@ -145,29 +147,49 @@ def run_bo_tabpfn(
     bounds = [
         SEARCH_SPACES["catboost"]["learning_rate"]["bounds"],
         SEARCH_SPACES["catboost"]["l2_leaf_reg"]["bounds"],
-        SEARCH_SPACES["catboost"]["depth"]["bounds"]
+        SEARCH_SPACES["catboost"]["depth"]["bounds"],
     ]
 
     categorical_cols = [
-        c for c in X_train.columns if X_train[c].dtype.name in ("object", "category", "bool")
+        c
+        for c in X_train.columns
+        if X_train[c].dtype.name in ("object", "category", "bool")
     ]
-    
+
     cat_features = [X_train.columns.get_loc(col) for col in categorical_cols]
-    
+
     # generate the initial hyperparameter values
-    x = np.column_stack([
-        np.random.uniform(bounds[0][0], bounds[0][1], size=init),  # learning_rate
-        np.random.randint(bounds[1][0], bounds[1][1], size=init),   # l2_leaf_reg
-        np.random.randint(bounds[2][0], bounds[2][1], size=init)   # depth
-      ])
+    x = np.column_stack(
+        [
+            np.random.uniform(bounds[0][0], bounds[0][1], size=init),  # learning_rate
+            np.random.randint(bounds[1][0], bounds[1][1], size=init),  # l2_leaf_reg
+            np.random.randint(bounds[2][0], bounds[2][1], size=init),  # depth
+        ]
+    )
     log_data = []
     ys = []
     for xi in x:
-        cb = model_cls(cat_features=cat_features, learning_rate=xi[0], l2_leaf_reg=int(xi[1]),depth=int(xi[2]),verbose=False)
+        cb = model_cls(
+            cat_features=cat_features,
+            learning_rate=xi[0],
+            l2_leaf_reg=int(xi[1]),
+            depth=int(xi[2]),
+            verbose=False,
+        )
         cb.fit(X_train, y_train)
         r2 = r2_score(y_val, cb.predict(X_val))
         ys.append(r2)
-        log_data.append({"iteration": len(log_data), "learning_rate": xi[0], "l2_leaf_reg": int(xi[1]),"depth": int(xi[2]), "r2": r2, "best_r2": max(ys), "init_point":True})
+        log_data.append(
+            {
+                "iteration": len(log_data),
+                "learning_rate": xi[0],
+                "l2_leaf_reg": int(xi[1]),
+                "depth": int(xi[2]),
+                "r2": r2,
+                "best_r2": max(ys),
+                "init_point": True,
+            }
+        )
 
     x = x.astype(np.float32)
     ys = np.asarray(ys, dtype=np.float32)
@@ -186,44 +208,73 @@ def run_bo_tabpfn(
         x_best, score_best = None, np.inf
 
         for _ in range(n_restarts):
-            x0 = np.array([
-                np.random.uniform(bounds[0][0], bounds[0][1]),  # learning_rate
-                np.random.randint(bounds[1][0], bounds[1][1]),   # l2_leaf_reg
-                np.random.randint(bounds[2][0], bounds[2][1])   # depth
-                ])
+            x0 = np.array(
+                [
+                    np.random.uniform(bounds[0][0], bounds[0][1]),  # learning_rate
+                    np.random.randint(bounds[1][0], bounds[1][1]),  # l2_leaf_reg
+                    np.random.randint(bounds[2][0], bounds[2][1]),  # depth
+                ]
+            )
             if acquisition == "ei":
                 opt_res = minimize(
                     fun=lambda xp: -EI(x=xp, model=model, eta=max(ys)),
-                    x0=x0, bounds=bounds, method="L-BFGS-B", options={"maxfun": 10}
+                    x0=x0,
+                    bounds=bounds,
+                    method="L-BFGS-B",
+                    options={"maxfun": 10},
                 )
             elif acquisition == "ucb":
                 opt_res = minimize(
                     fun=lambda xp: -UCB(x=xp, model=model),
-                    x0=x0, bounds=bounds, method="L-BFGS-B", options={"maxfun": 10}
+                    x0=x0,
+                    bounds=bounds,
+                    method="L-BFGS-B",
+                    options={"maxfun": 10},
                 )
             elif acquisition == "pi":
                 opt_res = minimize(
                     fun=lambda xp: -PI(x=xp, model=model, eta=max(ys)),
-                    x0=x0, bounds=bounds, method="L-BFGS-B", options={"maxfun": 10}
+                    x0=x0,
+                    bounds=bounds,
+                    method="L-BFGS-B",
+                    options={"maxfun": 10},
                 )
             else:
                 raise ValueError(f"Unknown acquisition: {acquisition}")
 
             if opt_res.fun < score_best:
                 x_best, score_best = np.asarray(opt_res.x).reshape(1, -1), opt_res.fun
-                
+
         x = np.vstack([x, x_best])
-        cb = model_cls(cat_features=cat_features, learning_rate=x_best[0][0], l2_leaf_reg=int(x_best[0][1]), depth=int(x_best[0][2]),verbose=False)
+        cb = model_cls(
+            cat_features=cat_features,
+            learning_rate=x_best[0][0],
+            l2_leaf_reg=int(x_best[0][1]),
+            depth=int(x_best[0][2]),
+            verbose=False,
+        )
         cb.fit(X_train, y_train)
         r2 = r2_score(y_val, cb.predict(X_val))
         if r2 > best_r2:
             best_r2 = r2
             best_model = cb
         ys = np.append(ys, r2)
-        log_data.append({"iteration": len(log_data),"learning_rate": x_best[0][0], "l2_leaf_reg": int(x_best[0][1]),"depth": int(x_best[0][2]), "r2": r2, "best_r2": max(ys), "init_point":False})
-        logger.debug(f"[{i+1}/{max_iter - init}] Next = learning_rate={x_best[0][0]}, l2_leaf_reg={int(x_best[0][1])}, depth={int(x_best[0][2])}, R²={r2:.4f}")
+        log_data.append(
+            {
+                "iteration": len(log_data),
+                "learning_rate": x_best[0][0],
+                "l2_leaf_reg": int(x_best[0][1]),
+                "depth": int(x_best[0][2]),
+                "r2": r2,
+                "best_r2": max(ys),
+                "init_point": False,
+            }
+        )
+        logger.debug(
+            f"[{i + 1}/{max_iter - init}] Next = learning_rate={x_best[0][0]}, l2_leaf_reg={int(x_best[0][1])}, depth={int(x_best[0][2])}, R²={r2:.4f}"
+        )
 
     log_df = pd.DataFrame(log_data)
     log_df.to_csv(log_file, index=False)
-    
+
     return best_model

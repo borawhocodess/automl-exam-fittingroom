@@ -176,9 +176,7 @@ def fit_model(
         return pipe
 
     if model_name in ["tabm", "realmlp"]:
-        return hpo_search(
-            model_cls, model_name, X, y, search_space, hpo_method, seed
-        )
+        return hpo_search(model_cls, model_name, X, y, search_space, hpo_method, seed)
 
     # Run HPO
     params = hpo_search(
