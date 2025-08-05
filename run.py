@@ -143,6 +143,7 @@ if __name__ == "__main__":
             "superconductivity",
             "wine_quality",
             "yprop_4_1",
+            "exam_dataset",
         ],
     )
     parser.add_argument(
